@@ -1,0 +1,21 @@
+# GOTime V1 locations.
+# lat/lon: city centre point used for "nearest grid cell" point values.
+# tz: IANA time zone; data is stored in UTC and converted per instant with this zone.
+# bbox: small crop box [lat_min, lat_max, lon_min, lon_max] in degrees, used to cut grids
+#   right after download. It spans at least 2 cells of the coarsest grid we use
+#   (CAMS global, 0.4 deg), so nearest-cell lookup and later interpolation have neighbours.
+
+locations:
+  amsterdam:
+    name: Amsterdam
+    lat: 52.37
+    lon: 4.90
+    tz: Europe/Amsterdam
+    bbox: [51.9, 52.9, 4.3, 5.5]
+
+  chennai:
+    name: Chennai
+    lat: 13.08
+    lon: 80.27
+    tz: Asia/Kolkata
+    bbox: [12.6, 13.6, 79.7, 80.8]
