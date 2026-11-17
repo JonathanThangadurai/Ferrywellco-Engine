@@ -1,6 +1,6 @@
 # Data pipeline design (V1)
 
-Goal: one hourly table per location that the health algorithm (right side of `docs/architecture.drawio`)
+Goal: one hourly table per location that the health algorithm (right side of `docs/architecture/gotime-data-architecture-v1.drawio`)
 reads through one interface. It should stay simple enough that anyone on the team can explain every step.
 
 ## Stages
