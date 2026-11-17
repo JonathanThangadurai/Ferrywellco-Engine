@@ -36,10 +36,19 @@ reads through one interface. It should stay simple enough that anyone on the tea
 | issue_time_utc | timestamp (UTC) | forecast base time; for observations, the time the provider published the value (EEA `ResultTime`) |
 | lead_h | int, nullable | valid minus issue in hours; null for observations |
 | status | str | `ok`, `missing`, `interpolated` |
+| site_id | str, nullable | station id for observations (e.g. `eea:NL00007`, `knmi:06240`); null for grid values (decided after stage A) |
 
-**Proposed extra column (decision needed):** `site_id` (nullable). Observations come from several stations per city, and
-bias correction needs to know which station is a background station. Without this column the station would have to be
-hidden inside `source`. Grid values would get `site_id = null`.
+**Sites table** (`sites`, one row per station or grid point, written when a source first sees it):
+
+| column | type | meaning |
+|---|---|---|
+| site_id | str | same id as in the hourly table |
+| name | str | station name from the provider |
+| lat, lon | float | station position |
+| station_type | str | `background`, `traffic`, `industrial`, `weather`, or null when unknown |
+| source | str | provider source name (`eea_e2a`, `knmi_hourly`, ...) |
+
+Bias fitting selects pairs through this table (e.g. only `background` stations in the Amsterdam box).
 
 ## Time handling
 
@@ -80,6 +89,10 @@ the setting to `s3://bucket/gotime` needs no code change.
   time keeps the peak well under 500 MB. ADS/CDS downloads are already cropped and tiny.
 - Disk conclusion (to confirm with measurements): local disk is enough for V1. Object storage only becomes
   useful when there are more cities or the archive is shared with other services.
+
+## ECMWF choice (decided after stage A)
+
+Default 0.1°, 00 and 12 UTC runs only, steps 0–96 h (3-hourly). 0.25° was also measured in stage B (see `size-test.md`).
 
 ## Not in V1
 
