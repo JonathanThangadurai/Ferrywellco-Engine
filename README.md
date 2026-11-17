@@ -1,4 +1,6 @@
-# gotime-data
+# Ferrywellco Engine: GOTime data layer
+
+This repository is `Ferrywellco-Engine` on GitHub; the Python package inside it is `gotime_data`.
 
 The GOTime data layer turns weather and air quality forecasts and observations into one hourly table per location,
 which the wellness algorithm reads through a small interface. GOTime gives wellness guidance (when and how to be active
@@ -20,7 +22,8 @@ uv run python scripts/size_test.py cams_eu|cams_global|era5|eea|knmi
 - `docs/data-pipeline-design.md`: stages, canonical table, retention, size and memory estimates.
 - `docs/open-questions.md`: questions for the algorithm side.
 - `docs/size-test.md`: measured sizes, times and memory; storage recommendation.
-- `docs/architecture.drawio`: architecture diagram (added by Jon).
+- `docs/architecture/gotime-data-architecture-v1.drawio`: architecture diagram (open with [diagrams.net](https://app.diagrams.net/)).
+- `docs/data-interface.md`: how the algorithm reads data (draft, pending health-engine review).
 
 ## Setup
 

@@ -1,7 +1,7 @@
 # CLAUDE.md: gotime-data
 
 GOTime turns weather and air quality forecasts into wellness guidance for partner apps (B2B API). This repo is the
-**data layer** (left side of `docs/architecture.drawio`): data in, storage, bias correction, verification, data
+**data layer** (left side of `docs/architecture/gotime-data-architecture-v1.drawio`): data in, storage, bias correction, verification, data
 interface. The health engine reads data through the interface defined here.
 
 ## Rules (always)
