@@ -6,6 +6,7 @@ PM comes in kg/m3 (x 1e9 -> ug/m3); NO2/O3 in kg/kg, converted with the air dens
 
 Point: nearest land cell. CAMS global has no land-sea mask in our files, so the land share of each
 0.4 deg cell is the mean of the ECMWF 0.1 deg land-sea mask inside it (saved by the ECMWF fetch).
+The plain nearest (coastal) cell is stored too, as an alternative site (see cells_to_store).
 """
 
 import logging
@@ -17,7 +18,7 @@ import xarray as xr
 
 from .. import convert, grid
 from ..config import locations, raw_dir
-from ..schema import SITE_COLUMNS, Batch
+from ..schema import ALTERNATIVE_SITE_SUFFIX, SITE_COLUMNS, Batch
 from ._common import (
     ads_area,
     ads_retrieve,
@@ -105,6 +106,39 @@ def _at(ds: xr.Dataset, var: str, cell: grid.Cell) -> pd.Series:
     return pd.Series(np.asarray(p.values, dtype="float64").ravel(), index=valid)
 
 
+def cells_to_store(
+    lats, lons, loc: dict, lsm: xr.DataArray | None, loc_id: str
+) -> list[tuple[str, grid.Cell]]:
+    """The default cell (nearest land cell) and, if different, the coastal cell (plain nearest cell).
+
+    Decided after stage C review: the land cell is the default; the coastal cell is stored too under
+    site_id grid:cams_global:<location>:coastal so the algorithm side can compare and choose.
+    """
+    land = choose_cell(lats, lons, loc, lsm)
+    out = [(f"grid:{NAME}:{loc_id}", land)]
+    coastal = grid.nearest_cell(lats, lons, loc["lat"], loc["lon"])
+    if (coastal.lat, coastal.lon) != (land.lat, land.lon):
+        coastal.method = "alternative: nearest cell incl. sea (coastal)"
+        out.append((f"grid:{NAME}:{loc_id}{ALTERNATIVE_SITE_SUFFIX}", coastal))
+    return out
+
+
+def _cell_rows(sfc, lev, cell: grid.Cell, loc_id: str, site_id: str, run, full) -> list[pd.DataFrame]:
+    """Canonical rows for one cell: PM from kg/m3, NO2/O3 from kg/kg with the air density from sp and t2m."""
+    sp, t2m = _at(sfc, "sp", cell).reindex(full), _at(sfc, "t2m", cell).reindex(full)
+    level = "kg/kg x air density (sp, t2m), model level 137"
+    series = {
+        "pm25_ugm3": (convert.kgm3_to_ugm3(_at(sfc, "pm2p5", cell)).reindex(full), None),
+        "pm10_ugm3": (convert.kgm3_to_ugm3(_at(sfc, "pm10", cell)).reindex(full), None),
+        "no2_ugm3": (convert.mmr_to_ugm3(_at(lev, "no2", cell).reindex(full), sp, t2m), level),
+        "o3_ugm3": (convert.mmr_to_ugm3(_at(lev, "go3", cell).reindex(full), sp, t2m), level),
+    }
+    return [
+        rows(loc_id, var, values, "ok", NAME, "forecast", run, site_id, method)
+        for var, (values, method) in series.items()
+    ]
+
+
 def to_points(raw: Path) -> Batch:
     manifest = read_manifest(raw)
     run = utc(manifest["issue_time_utc"])
@@ -120,32 +154,18 @@ def to_points(raw: Path) -> Batch:
             xr.open_dataset(raw / f"{loc_id}_surface.nc") as sfc,
             xr.open_dataset(raw / f"{loc_id}_level137.nc") as lev,
         ):
-            cell = choose_cell(sfc.latitude.values, sfc.longitude.values, loc, lsm)
-            site_id = f"grid:{NAME}:{loc_id}"
-            sites.append(
-                [
-                    site_id,
-                    f"{cell.method} to {loc['lat']}, {loc['lon']} (land {cell.land_fraction})",
-                    cell.lat,
-                    cell.lon,
-                    "grid",
-                    NAME,
-                ]
-            )
-            sp, t2m = _at(sfc, "sp", cell).reindex(full), _at(sfc, "t2m", cell).reindex(full)
-            series = {
-                "pm25_ugm3": (convert.kgm3_to_ugm3(_at(sfc, "pm2p5", cell)).reindex(full), None),
-                "pm10_ugm3": (convert.kgm3_to_ugm3(_at(sfc, "pm10", cell)).reindex(full), None),
-                "no2_ugm3": (
-                    convert.mmr_to_ugm3(_at(lev, "no2", cell).reindex(full), sp, t2m),
-                    "kg/kg x air density (sp, t2m), model level 137",
-                ),
-                "o3_ugm3": (
-                    convert.mmr_to_ugm3(_at(lev, "go3", cell).reindex(full), sp, t2m),
-                    "kg/kg x air density (sp, t2m), model level 137",
-                ),
-            }
-            for var, (values, method) in series.items():
-                frames.append(rows(loc_id, var, values, "ok", NAME, "forecast", run, site_id, method))
+            for site_id, cell in cells_to_store(sfc.latitude.values, sfc.longitude.values, loc, lsm, loc_id):
+                share = f" (land {cell.land_fraction})" if cell.land_fraction is not None else ""
+                sites.append(
+                    [
+                        site_id,
+                        f"{cell.method} to {loc['lat']}, {loc['lon']}{share}",
+                        cell.lat,
+                        cell.lon,
+                        "grid",
+                        NAME,
+                    ]
+                )
+                frames += _cell_rows(sfc, lev, cell, loc_id, site_id, run, full)
     hourly = pd.concat(frames, ignore_index=True)
     return Batch(hourly, pd.DataFrame(sites, columns=SITE_COLUMNS), cycle_rows(hourly, manifest))

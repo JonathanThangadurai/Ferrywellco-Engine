@@ -136,3 +136,17 @@ def test_mean_24h_needs_coverage():
     assert pd.isna(out["value"].iloc[16]) and out["n_hours"].iloc[16] == 17  # 17 < 18 hours
     gappy = df.drop(index=range(0, 8))  # 16 of 24 hours left
     assert pd.isna(mean_24h(gappy, "pm25_ugm3")["value"].iloc[-1])
+
+
+def test_alternative_coastal_cell_only_on_request(storage, raw_batch, monkeypatch):
+    from gotime_data.sources import cams_global
+
+    raw = raw_batch("cams_global")
+    monkeypatch.setattr(
+        cams_global, "lsm_file", lambda loc: raw.parents[2] / "static" / f"ecmwf_lsm_{loc}.nc"
+    )
+    write_batch(cams_global.to_points(raw), "g")
+    s, e = datetime(2026, 11, 16, tzinfo=UTC), datetime(2026, 11, 21, tzinfo=UTC)
+    assert set(get_hourly("chennai", s, e)["site_id"]) == {"grid:cams_global:chennai"}
+    both = get_hourly("chennai", s, e, include_alternatives=True)
+    assert set(both["site_id"]) == {"grid:cams_global:chennai", "grid:cams_global:chennai:coastal"}

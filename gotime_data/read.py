@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from .schema import INTERNAL_SOURCES, normalise
+from .schema import ALTERNATIVE_SITE_SUFFIX, INTERNAL_SOURCES, normalise
 from .store import read_cycles, read_hourly
 
 GROUP = ["location_id", "source", "kind", "site_id"]
@@ -58,17 +58,22 @@ def get_hourly(
     kind: str | None = "forecast",
     latest_only: bool = True,
     include_internal: bool = False,
+    include_alternatives: bool = False,
 ) -> pd.DataFrame:
     """Hourly rows for one location in [start_utc, end_utc), in the canonical table format.
 
     kind: 'forecast' (default), 'observation', 'reanalysis', or None for all.
     latest_only: newest complete forecast cycle per source and variable (False = all cycles).
     include_internal: also return internal-only sources (OpenAQ). Never True for anything partners see.
+    include_alternatives: also return alternative grid cells (site_id ending in ':coastal', CAMS global
+        Chennai); by default only the default cell per source is returned.
     """
     start, end = _check_utc(start_utc, "start_utc"), _check_utc(end_utc, "end_utc")
     df = read_hourly(location_id, start, end, variables, [kind] if kind else None)
     if not include_internal:
         df = df[~df["source"].isin(INTERNAL_SOURCES)]
+    if not include_alternatives:
+        df = df[~df["site_id"].fillna("").str.endswith(ALTERNATIVE_SITE_SUFFIX)]
     return latest_complete_cycles(df, read_cycles()) if latest_only else df.reset_index(drop=True)
 
 

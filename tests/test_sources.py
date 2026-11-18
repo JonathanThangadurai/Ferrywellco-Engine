@@ -98,3 +98,16 @@ def test_eea_invalid_values_become_missing():
     df = eea.file_to_rows(src, pd.Timestamp("2026-11-16 23:00", tz="UTC"))
     assert list(df["status"]) == ["ok", "missing", "ok"]
     assert pd.isna(df["value"].iloc[1])
+
+
+def test_cams_global_stores_land_cell_default_and_coastal_alternative(raw_batch, monkeypatch):
+    raw = raw_batch("cams_global")
+    monkeypatch.setattr(
+        cams_global, "lsm_file", lambda loc: raw.parents[2] / "static" / f"ecmwf_lsm_{loc}.nc"
+    )
+    batch = cams_global.to_points(raw)
+    sites = batch.sites.set_index("site_id")
+    assert tuple(sites.loc["grid:cams_global:chennai", ["lat", "lon"]]) == (13.2, 80.0)  # land, default
+    assert tuple(sites.loc["grid:cams_global:chennai:coastal", ["lat", "lon"]]) == (13.2, 80.4)
+    assert batch.hourly.groupby("site_id").size().nunique() == 1  # same rows for both cells
+    assert validate(batch.hourly) == []

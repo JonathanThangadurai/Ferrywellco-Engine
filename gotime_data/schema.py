@@ -40,6 +40,9 @@ SOURCES = {"ecmwf_ifs", "cams_eu", "cams_global", "eea_e2a", "eea_e1a", "knmi_ho
 # Internal sources are used for verification only and never appear in output for partners.
 # OpenAQ: its terms do not allow building a competing service on its API (docs/data-sources.md).
 INTERNAL_SOURCES = {"openaq"}
+# Alternative grid cells are stored next to the default cell with this site_id suffix (CAMS global Chennai:
+# coastal cell next to the default land cell). The read interface returns them only on request.
+ALTERNATIVE_SITE_SUFFIX = ":coastal"
 POLLEN_TYPES = ["alder", "birch", "grass", "mugwort", "olive", "ragweed"]
 
 # variable name -> unit and meaning. The unit is also in the name, so a number is never read without it.
