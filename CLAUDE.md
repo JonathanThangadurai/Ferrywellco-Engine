@@ -37,6 +37,8 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
   Decided: 0.1°, 00/06/12/18 UTC, 0–96 h. Published 00/12 at base + 9 h 34 min, 06/18 at + 8 h 27 min (0.25°: + 7 h 34).
   Own byte-range fetcher; AWS first, data.ecmwf.int fallback, every fallback logged. Serve newest complete cycle.
 - Point: nearest land cell (lsm >= 0.5). Chennai: ECMWF 13.1, 80.2; CAMS global 13.2, 80.0 (land share from ECMWF lsm).
+  CAMS global Chennai coastal cell 13.2, 80.4 also stored (`grid:cams_global:chennai:coastal`, read only on request).
+  site_id on grid rows = `grid:<source>:<location>` (kept). KNMI: hourly collection; 10-minute data is a later option.
 - OpenAQ: INTERNAL ONLY (never in partner output; never commit its data; fixtures synthetic). NO2 in ppb -> ug/m3
   with measured T/p else 25 C/1013.25 hPa, recorded in `method`. Duplicate sensors: keep non-empty / most hours.
 - Public GitHub repo `JonathanThangadurai/Ferrywellco-Engine` (origin). Package stays `gotime_data`.
@@ -56,5 +58,5 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 
 - [x] Stage A: facts and design (skeleton, data-sources, pipeline design, open questions). Approved 2026-11-17.
 - [x] Stage B: access check and size test. Approved 2026-11-17. Stages A+B pushed to origin/main on 2026-11-17.
-- [x] Stage C: `gotime_data/` package (sources, store, schema, read, cli), tests, README. Awaiting review; not pushed.
+- [x] Stage C: `gotime_data/` package (sources, store, schema, read, cli), tests, README. Reviewed 2026-11-18; pushed.
   `docs/data-interface.md` stays "draft, pending Tilman's review" until Tilman confirms.

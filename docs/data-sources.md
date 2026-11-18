@@ -86,7 +86,8 @@ humidity, wind and pollution). The chosen cell and the method are written to the
   (test `test_chennai_cams_own_land_sea_mask_picks_the_same_cell`). We keep the ECMWF-derived share so no extra
   ADS request is needed per run.
 - **Chennai CAMS caveat**: at 0.4° the nearest land cell is 32 km west of the centre, so it represents the
-  inland west of the city, not the coast. This is a question for Tilman (`open-questions.md`).
+  inland west of the city, not the coast. Decided after stage C: the land cell stays the default, and the coastal
+  cell (13.2, 80.4) is stored too as `grid:cams_global:chennai:coastal`, so Tilman can choose (`open-questions.md` 18).
 
 ## 2. CAMS European air quality forecast (Amsterdam, incl. pollen)
 
@@ -152,7 +153,7 @@ humidity, wind and pollution). The chosen cell and the method are written to the
 
 - **Provider / dataset**: KNMI Data Platform, collections `hourly-in-situ-meteorological-observations` (near real time, since 2015) and `...-validated` (since 1951). [docs]
 - **Access**: EDR API `https://api.dataplatform.knmi.nl/edr/v1/collections/{collection}/locations/{station}` with `datetime=start/end` (optionally `parameter-name=...`); header `Authorization: <KNMI_EDR_API_KEY>`. Station list: `.../locations`. Schiphol location id is `0-20000-0-06240`. The response is CoverageJSON (`CoverageCollection` → `coverages[0].ranges[<param>].values`). One day for one station is 17 kB and takes 0.2 s. [live]
-- **Delay** [live, C]: the hourly EDR collection is **not** near real time: fetched at 13:31 UTC on 18 Nov 2026, the newest stamp was 00:00 UTC (≈ 13.5 h behind; looks like a once-a-day update). For fresh observations the 10-minute collection (Open Data API, `10-minute-in-situ-meteorological-observations`) would be needed [open].
+- **Delay** [live, C]: the hourly EDR collection is **not** near real time: fetched at 13:31 UTC on 18 Nov 2026, the newest stamp was 00:00 UTC (≈ 13.5 h behind; looks like a once-a-day update). Decided after stage C: stay on the hourly collection for now (fine for forecast–observation pairs). **Later option** for fresh observations: the 10-minute collection (Open Data API, `10-minute-in-situ-meteorological-observations`), not checked for delay yet.
 - **Limits**: registered users get 200 requests/s and 1000 requests/hour. The anonymous key gets 429 under normal use, so we use the personal keys only. [docs + known fact]
 - **Licence / attribution**: CC BY 4.0. "Source: KNMI (Royal Netherlands Meteorological Institute)". [docs]
 - **Variables** [live, from the parameter metadata]: `T` air temperature °C (past 1 minute, **at 1.5 m**, not 2 m), `TD` dew point °C (1.5 m), `U` relative humidity %, `FH` hourly mean wind speed m/s (10 m), `FF` past-10-minute wind speed m/s, `DD` wind direction ° (0 = calm, 990 = variable), `Q` hourly global radiation **J/cm²** (W m⁻² = Q × 10 000 / 3600).

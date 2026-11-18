@@ -52,6 +52,10 @@ so we can fix the interface (`docs/data-interface.md`, written in Stage C).
     Options: (a) keep the nearest land cell, (b) a weighted mix of the coastal and inland cells, (c) the nearest
     cell regardless of sea. Which fits the algorithm best? Observations (OpenAQ, internal) can tell us later
     which one verifies better.
+    **Decided for now (Jon, after stage C):** the land cell (13.2, 80.0) is the default
+    (`site_id = grid:cams_global:chennai`). The coastal cell (13.2, 80.4) is stored too
+    (`site_id = grid:cams_global:chennai:coastal`); `get_hourly(..., include_alternatives=True)` returns both so
+    you can compare them and choose.
 19. **ECMWF 0.1° versus 0.25°.** 0.1° shows more local detail (coast, city) but is published about 2 h later
     (00/12 UTC runs: 9 h 34 min after the run start, versus 7 h 34 min for 0.25°). We chose 0.1° with all four
     runs (00/06/12/18 UTC). Do you prefer resolution or the 2 h fresher 0.25° forecast?

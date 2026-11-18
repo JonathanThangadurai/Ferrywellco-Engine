@@ -34,6 +34,9 @@ Arguments:
   past use `latest_only=False` and pick the cycle you want.
 - `include_internal` (default `False`): internal-only sources (OpenAQ) are left out. Never set it for anything
   partners see.
+- `include_alternatives` (default `False`): alternative grid cells are left out. Today there is one: the coastal
+  CAMS global cell for Chennai (`site_id = grid:cams_global:chennai:coastal`), stored next to the default land
+  cell so you can compare them (open question 18).
 
 Returns one row per (valid hour, variable, source[, site]) with these columns:
 
@@ -101,7 +104,9 @@ such as Chennai does not get a sea cell. The chosen cell per source and location
 
 ```python
 from gotime_data.store import read_sites
+
 read_sites()  # site_id, name (method), lat, lon, station_type, source
 ```
 
 Grid cells have `site_id = grid:<source>:<location>` and `station_type = grid`; stations have their own ids.
+Alternative cells add a suffix (`grid:cams_global:chennai:coastal`).
