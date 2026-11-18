@@ -70,3 +70,10 @@ def test_mmr_to_ugm3_standard_air():
 def test_mmr_to_ugm3_hot_air_is_less_dense():
     """Chennai-like 35 C gives a lower concentration than 15 C for the same mixing ratio."""
     assert mmr_to_ugm3(1e-8, 100800.0, 308.15) < mmr_to_ugm3(1e-8, 101325.0, 288.15)
+
+
+def test_rh_from_t_and_dew_point():
+    from gotime_data.convert import rh_from_t_td
+
+    assert rh_from_t_td(10.0, 10.0) == 100.0
+    assert 49 < rh_from_t_td(20.0, 9.3) < 51

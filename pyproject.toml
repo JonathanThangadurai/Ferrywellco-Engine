@@ -10,7 +10,6 @@ dependencies = [
     "duckdb>=2.0.0",
     "eccodes>=2.50.1",
     "eccodeslib>=2.50.0.34",
-    "ecmwf-opendata>=0.3.35",
     "fsspec>=2026.9.0",
     "h5netcdf>=1.8.3",
     "h5py>=3.16.0",
@@ -21,6 +20,9 @@ dependencies = [
     "pyyaml>=6.0",
     "xarray>=2026.9.0",
 ]
+
+[project.scripts]
+gotime-data = "gotime_data.cli:main"
 
 # eccodeslib ships the ecCodes C library as a wheel, so no system install is needed.
 # s3fs is added when storage moves to s3://.

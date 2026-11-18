@@ -41,7 +41,9 @@ Not measured yet. The access check proved the key and licence work (the job was 
 2026-11-17 the jobs stayed queued for over an hour during announced CDS/ADS maintenance (08:00–17:00 CET, data older
 than 4–5 days, i.e. all of ERA5). The size-test request was then **rejected** with "Maximum number queued requests
 for this dataset has been reached", because the earlier check jobs were still in the queue. To redo after the queue
-clears: `uv run python scripts/size_test.py era5`. Expected size (0.25°, 5 variables, 5 × 5 cells, 24 h): well under
+clears: `uv run python scripts/size_test.py era5`. **Retried 18 Nov** after the old jobs were cancelled: the CAMS
+land-sea mask request on the ADS went through in 24 s, but the ERA5 request was still queued at the CDS after
+~40 min, so it is still not measured (the request is left running, one at a time). Expected size (0.25°, 5 variables, 5 × 5 cells, 24 h): well under
 0.1 MB per city per day, so a 20-year climatology per city is under 1 GB; it is a one-off download.
 
 ## Projection for the decided setup

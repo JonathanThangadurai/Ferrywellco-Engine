@@ -39,3 +39,27 @@ so we can fix the interface (`docs/data-interface.md`, written in Stage C).
 15. Do you call our read interface as a Python function (`get_hourly(...)` returning a DataFrame), or do you prefer a
     Parquet/DuckDB query you run yourself?
 16. Wording: user-facing outputs must be wellness guidance and never say "safe", "clean" or "healthy". Agreed list of terms?
+
+## 6. Added after stage B (data side findings that need your view)
+
+17. **CAMS Europe: instant or hourly mean?** CAMS Europe gives one value per hour, but neither the file nor the
+    documentation says whether it is the value at that instant or the mean over the hour. We store it at
+    run time + lead hour. For 24-hour means it hardly matters; for "the hour from 14:00 to 15:00" it shifts the
+    value by up to half an hour. Is that acceptable, or should we ask CAMS user support?
+18. **Chennai land cell.** Chennai is on the coast. The grid cell nearest to the city point is mostly sea
+    (ECMWF 0.1°: 37 % land; CAMS global 0.4°: about 30 % land). We now use the nearest *land* cell: for ECMWF
+    8 km west of the centre (fine), but for CAMS global 32 km west (13.2, 80.0), i.e. inland rather than the city.
+    Options: (a) keep the nearest land cell, (b) a weighted mix of the coastal and inland cells, (c) the nearest
+    cell regardless of sea. Which fits the algorithm best? Observations (OpenAQ, internal) can tell us later
+    which one verifies better.
+19. **ECMWF 0.1° versus 0.25°.** 0.1° shows more local detail (coast, city) but is published about 2 h later
+    (00/12 UTC runs: 9 h 34 min after the run start, versus 7 h 34 min for 0.25°). We chose 0.1° with all four
+    runs (00/06/12/18 UTC). Do you prefer resolution or the 2 h fresher 0.25° forecast?
+20. **Forecast age in the morning.** Even with the 06/18 UTC runs, the newest weather forecast at 06:00 local
+    time is about **11 h old in Amsterdam** (10 h in summer) and **12.5 h old in Chennai**. Observations arrive
+    much faster: EEA about 2–3 h and OpenAQ about 1.5–2.5 h after the hour. KNMI's hourly collection lags
+    much more (at 13:31 UTC on 18 Nov the newest hour was 00:00 UTC); KNMI's 10-minute data may be fresher (to
+    check). Idea (not built):
+    adjust the first forecast hours towards the latest observation (e.g. the current forecast error fading out
+    over the next 6–12 hours). Would that be useful for the morning guidance, and which variables matter most?
+

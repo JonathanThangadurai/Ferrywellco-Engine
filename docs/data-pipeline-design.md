@@ -36,7 +36,8 @@ reads through one interface. It should stay simple enough that anyone on the tea
 | issue_time_utc | timestamp (UTC) | forecast base time; for observations, the time the provider published the value (EEA `ResultTime`) |
 | lead_h | int, nullable | valid minus issue in hours; null for observations |
 | status | str | `ok`, `missing`, `interpolated` |
-| site_id | str, nullable | station id for observations (e.g. `eea:NL00007`, `knmi:06240`); null for grid values (decided after stage A) |
+| site_id | str | station id for observations (e.g. `eea:NL/SPO-NL00002_00008_101`, `knmi:06240`); for grid values the chosen cell `grid:<source>:<location>` (stage C: links each value to its cell in the sites table) |
+| method | str, nullable | how a value was made where that matters (unit conversion with standard or measured T/p, KNMI 1.5 m, 3-hour mean spread) (added in stage C) |
 
 **Sites table** (`sites`, one row per station or grid point, written when a source first sees it):
 
@@ -90,9 +91,29 @@ the setting to `s3://bucket/gotime` needs no code change.
 - Disk conclusion (to confirm with measurements): local disk is enough for V1. Object storage only becomes
   useful when there are more cities or the archive is shared with other services.
 
-## ECMWF choice (decided after stage A)
+## ECMWF choice (decided after stages A and B)
 
-Default 0.1°, 00 and 12 UTC runs only, steps 0–96 h (3-hourly). 0.25° was also measured in stage B (see `size-test.md`).
+0.1°, runs 00, 06, 12 and 18 UTC, steps 0–96 h (3-hourly). AWS mirror first, `data.ecmwf.int` as fallback (logged).
+Each cycle's issue and publish time are recorded in `meta/cycles/`; the newest complete cycle is served.
+
+## Point selection (decided after stage B)
+
+Nearest land cell (land-sea mask ≥ 0.5) for ECMWF, CAMS global (land share from the ECMWF 0.1° mask) and ERA5;
+plain nearest cell for CAMS Europe over Amsterdam. Chosen cells are in the sites table; details in `data-sources.md`.
+
+## Storage layout (stage C)
+
+```
+<GOTIME_STORAGE_ROOT>/raw/<source>/<batch>/        cropped downloads + manifest.json (2 days; local files)
+<GOTIME_STORAGE_ROOT>/static/ecmwf_lsm_<loc>.nc     cropped land-sea mask
+<GOTIME_STORAGE_ROOT>/live/hourly/source=<s>/date=<d>/part.parquet      10 days
+<GOTIME_STORAGE_ROOT>/archive/hourly/source=<s>/date=<d>/part.parquet   kept
+<GOTIME_STORAGE_ROOT>/meta/sites/<source>.parquet, meta/cycles/<source>/<batch>.parquet
+```
+
+`date` is the issue date for forecasts and the valid date for observations. Writing merges into the partition file
+and drops only exact duplicates; a revised observation has a new issue time and is kept next to the old one.
+OpenAQ (`openaq`) is an internal-only source: stored, but left out of the read interface by default.
 
 ## Not in V1
 

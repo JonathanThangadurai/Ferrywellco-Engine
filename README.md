@@ -6,15 +6,39 @@ The GOTime data layer turns weather and air quality forecasts and observations i
 which the wellness algorithm reads through a small interface. GOTime gives wellness guidance (when and how to be active
 outside); it is not a health service.
 
-Status: **Stage B (access check and size test) done**. The pipeline package comes in stage C.
+Status: **Stage C (ingestion pipeline and read interface) done, awaiting review.** Scheduling (cron in Docker) and
+the partner API (FastAPI) come later.
 
-## Scripts
+## What each stage does
+
+1. **fetch**: download the newest data per source, only our variables, cropped to the city boxes right away
+   (`raw/<source>/<batch>/`, kept 2 days). ECMWF: own byte-range downloader, AWS first, ECMWF server as fallback.
+2. **ingest**: turn raw files into the canonical hourly table: nearest land grid cell, unit conversion, UTC,
+   3-hourly steps filled to hourly (`interpolated`), missing hours as null + `missing`. Validated, then written as
+   Parquet (`live/`, 10 days; then `archive/`, kept). Chosen grid cells and stations go to the sites table, forecast
+   cycles (issue, publish, complete) to the cycles table.
+3. **read**: `gotime_data.read.get_hourly(...)` plus 24-hour and maximum 8-hour means, computed on read
+   (`docs/data-interface.md`, draft pending Tilman's review).
+4. **clean**: retention (raw 2 days, live 10 days, then archive).
+
+## How to run
 
 ```
-uv run python scripts/check_access.py          # one small request per source: OK / FAILED and why
-uv run python scripts/size_test.py ecmwf --resol 0p1 --mirror ecmwf
-uv run python scripts/size_test.py cams_eu|cams_global|era5|eea|knmi
+uv sync
+uv run gotime-data check                  # one small request per source: OK / FAILED and why (no keys printed)
+uv run gotime-data fetch ecmwf            # sources: ecmwf cams_eu cams_global eea knmi era5 openaq
+uv run gotime-data ingest ecmwf           # every raw batch not ingested yet
+uv run gotime-data read amsterdam --hours 48 --variables t2m_c pm25_ugm3
+uv run gotime-data clean
+uv run pytest                             # no network; small saved fixtures in tests/fixtures/
+uv run ruff check .
 ```
+
+Stage B measurement scripts: `scripts/check_access.py`, `scripts/size_test.py` (see `docs/size-test.md`).
+
+ADS/CDS (CAMS, ERA5) allow only a few queued requests per dataset; the pipeline sends one request at a time.
+OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hourly` unless
+`include_internal=True`, never shown to partners, and its data is never committed here.
 
 ## Docs
 
@@ -22,16 +46,9 @@ uv run python scripts/size_test.py cams_eu|cams_global|era5|eea|knmi
 - `docs/data-pipeline-design.md`: stages, canonical table, retention, size and memory estimates.
 - `docs/open-questions.md`: questions for the algorithm side.
 - `docs/size-test.md`: measured sizes, times and memory; storage recommendation.
+- `docs/data-interface.md`: how the algorithm reads data (draft, pending Tilman's review).
 - `docs/architecture/gotime-data-architecture-v1.drawio`: architecture diagram (open with [diagrams.net](https://app.diagrams.net/)).
 - `docs/data-interface.md`: how the algorithm reads data (draft, pending Tilman's review).
-
-## Setup
-
-```
-uv sync
-uv run pytest
-uv run ruff check .
-```
 
 ## Environment variables (names only; never commit values)
 
@@ -42,7 +59,7 @@ uv run ruff check .
 | `COPERNICUS_KEY` | ADS and CDS key (CAMS, ERA5) |
 | `ADS_URL` | ADS API URL (CAMS) |
 | `CDS_URL` | CDS API URL (ERA5) |
-| `OPENAQ_API_KEY` | optional, OpenAQ (Chennai observations, not used yet) |
+| `OPENAQ_API_KEY` | OpenAQ (Chennai observations, internal use only) |
 | `GOTIME_STORAGE_ROOT` | storage root, local path or `s3://...` (default `./data`) |
 
 ERA5 and CAMS both use `COPERNICUS_KEY`; `~/.cdsapirc` holds the same CDS key for other tools. If the variables are not set, scripts read `~/.config/gotime/keys.env`.
@@ -57,3 +74,5 @@ ERA5 and CAMS both use `COPERNICUS_KEY`; `~/.cdsapirc` holds the same CDS key fo
 Contains ECMWF open data (CC BY 4.0). Generated using Copernicus Atmosphere Monitoring Service and Copernicus Climate
 Change Service information (CC BY 4.0). Air quality observations: European Environment Agency. Weather observations:
 KNMI (CC BY 4.0). All data has been modified (cropped, converted, interpolated). Details per source are in `docs/data-sources.md`.
+Test fixtures: see `tests/fixtures/README.md` (the OpenAQ fixture is synthetic). OpenAQ data (internal only):
+CPCB / TNPCB via OpenAQ.
