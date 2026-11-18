@@ -24,6 +24,7 @@ Summary:
 | KNMI daily TG (frozen copy) | climatology, Amsterdam | file in `climatology/` | CC BY 4.0 (KNMI) | none |
 | Luchtmeetnet | fallback only, AQ observations NL | REST (`httpx`) | open data [open] | none |
 | CPCB (India) | not used in V1 | no stable API found | n/a | n/a |
+| OpenAQ (CPCB/TNPCB) | Chennai observations, internal only | REST v3 (`httpx`) | provider terms + OpenAQ terms | `OPENAQ_API_KEY` |
 
 ---
 
@@ -31,19 +32,61 @@ Summary:
 
 - **Provider / dataset**: ECMWF, IFS HRES "oper" stream, open data subset. [docs]
 - **Access**: one GRIB2 file per step plus a JSON-lines `.index` with the byte offset of each field, so we download only our fields with HTTP range requests. Mirrors: AWS bucket `ecmwf-forecasts` (eu-central-1) and `data.ecmwf.int/forecasts`, same paths `YYYYMMDD/HHz/ifs/{0p25|0p1}/oper/`. 0.1° file names end in `-oper-fc-sfc.grib2`. [live]
-- **Download method** [B]: our own small range fetcher (httpx), not the `ecmwf-opendata` client. Reason: on 2026-11-17 AWS answered `503 SlowDown` to every request for several minutes, and the client retried silently, so it looked like a hang. Our fetcher retries 429/503 a bounded number of times with backoff and the mirror is a setting (AWS default, ECMWF fallback).
+- **Download method** [B, C]: our own small range fetcher (httpx), not the `ecmwf-opendata` client (removed from the dependencies). Reason: on 2026-11-17 AWS answered `503 SlowDown` to every request for several minutes, and the client retried silently, so it looked like a hang. Source order (decided after stage B): **AWS first, `data.ecmwf.int` as fallback**. Each request retries 429/503 six times (1 + 2 + … + 32 s); if AWS still fails, the fetcher logs a warning and uses ECMWF for the rest of that cycle. Every fallback is logged and written to the raw batch's `manifest.json` (`mirror_fallbacks`).
 - **Licence**: CC BY 4.0 plus the ECMWF Terms of Use; commercial use allowed. [docs]
 - **Attribution**: "Contains ECMWF open data, © ECMWF, licensed under CC BY 4.0." State the changes we make (cropping, interpolation, bias correction).
 - **Resolution**: 0.25°, and 0.1° since 20 Oct 2026 (the 0.1° surface file is `...-oper-fc-sfc.grib2`). [docs, live: the 0p1 folder exists on AWS]
 - **Runs / length**: 00, 06, 12, 18 UTC. 00/12 UTC: 0–144 h every 3 h, then 150–360 h every 6 h. 06/18 UTC: 0–144 h every 3 h. Only about the last 12 runs (2–3 days) are kept online. [docs]
-- **Delay** [B, Last-Modified on the server]: 0.25° is published at base + **7 h 34 min**, 0.1° at base + **9 h 34 min** (00z ready ~09:34 UTC, 12z ~21:34 UTC). With 0.1°, the newest forecast is always ≥ 9.5 h old.
+- **Runs used** (decided after stage B): 0.1°, **00, 06, 12 and 18 UTC**, steps 0–96 h every 3 h. The 06/18 UTC runs exist at 0.1° in open data as stream `oper` (not `scda`), with steps 0–144 h every 3 h [live, 17 Nov 2026]. The land-sea mask `lsm` is in the step-0 file and is fetched once per cycle.
+- **Delay** [live, Last-Modified on data.ecmwf.int, 16–17 Nov 2026; all steps of a run carry the same time]:
+
+  | run | 0.1° published | 0.25° published |
+  |---|---|---|
+  | 00 UTC | base + 9 h 34 min (09:34 UTC) | base + 7 h 34 min |
+  | 06 UTC | base + 8 h 27 min (14:27 UTC) | |
+  | 12 UTC | base + 9 h 34 min (21:34 UTC) | base + 7 h 34 min |
+  | 18 UTC | base + 8 h 27 min (02:27 UTC next day) | |
+
+- **Forecast age at 06:00 local time** (age = now − issue time of the newest published cycle):
+
+  | location | 06:00 local = | newest cycle then | age | without 06/18 UTC runs |
+  |---|---|---|---|---|
+  | Amsterdam, winter (CET) | 05:00 UTC | 18 UTC of the day before (out 02:27) | **11 h** | 17 h (12 UTC) |
+  | Amsterdam, summer (CEST) | 04:00 UTC | 18 UTC of the day before | **10 h** | 16 h |
+  | Chennai (IST) | 00:30 UTC | 12 UTC of the day before (out 21:34) | **12.5 h** | 12.5 h |
+
+- **Serving**: every ingested cycle is recorded in `meta/cycles/` with issue time, publish time (Last-Modified), fetch time and whether it is complete (all steps present) per location and variable. The read interface serves the newest *complete* cycle per source and variable.
 - **Variables**: `2t` (K), `2d` (K), `10u` and `10v` (m s⁻¹), `ssrd` (J m⁻², accumulated since base time). Relative humidity is derived from 2t and 2d. [live: all five fields are in the 0.1° index; global field size 1.4–3.7 MB each, about 12 MB per step for the five]
 - **Time stamp**: `2t`, `2d`, `10u` and `10v` are instantaneous at valid time = base + step. `ssrd` is accumulated from base time to the step: mean W m⁻² = (ssrd[step] − ssrd[prev]) / (Δt in seconds), and the result is the mean over the interval that **ends** at the step.
 - **Pitfalls**:
   - Steps are 3-hourly, not hourly. Hourly rows between steps are filled by interpolation and get `status = interpolated`. Each GRIB field is global, so a field must be cropped to the city box straight after download (never keep a global array).
   - Converting radiation (de-accumulating `ssrd`) needs the previous step's field, so we keep the previous step's cropped field rather than the global one.
   - Kelvin → °C.
+- **Point** [C]: nearest land cell (lsm ≥ 0.5) to the city point, see "Point selection" below.
 - **Known facts handled**: CC BY confirmed. The model temperature bias against Schiphol (about −1.4 °C at 10:00, +0.9 °C at 21:00) was measured on an earlier model feed, so it must be re-measured: forecast–observation pairs are stored with `lead_h` and the valid hour so a per-hour-of-day correction can be fitted later.
+
+## Point selection (decided after stage B)
+
+The value for a city is taken from one grid cell: the **nearest land cell** (land-sea mask ≥ 0.5) to the city
+point in `config/locations.yaml`. A coastal city otherwise gets a cell that is mostly sea (different temperature,
+humidity, wind and pollution). The chosen cell and the method are written to the `sites` table
+(`site_id = grid:<source>:<location>`), so it can always be checked. Code: `gotime_data/grid.py`; tests:
+`tests/test_grid.py`.
+
+| source | location | land-sea mask | nearest cell (land share) | chosen cell (land share) | distance to city point |
+|---|---|---|---|---|---|
+| ECMWF 0.1° | Amsterdam (52.37, 4.90) | ECMWF `lsm` | 52.4, 4.9 (0.83) | same | 3 km |
+| ECMWF 0.1° | Chennai (13.08, 80.27) | ECMWF `lsm` | 13.1, 80.3 (**0.37**, mostly sea) | **13.1, 80.2** (0.98) | 8 km |
+| CAMS global 0.4° | Chennai | land share = mean of the ECMWF 0.1° `lsm` inside each 0.4° cell | 13.2, 80.4 (**0.31**) | **13.2, 80.0** (0.99) | 32 km |
+| CAMS Europe 0.1° | Amsterdam | none needed (plain nearest cell) | 52.35, 4.95 | same | 4 km |
+| ERA5 0.25° | both | ERA5 `lsm`, requested with the data | | | |
+
+- **CAMS global cross-check** [live, 18 Nov 2026]: the ADS also serves `land_sea_mask` for this dataset. CAMS's own
+  mask gives 0.27 for 13.2, 80.4 and 0.94 for 13.2, 80.0, so it picks the same cell as the ECMWF land share
+  (test `test_chennai_cams_own_land_sea_mask_picks_the_same_cell`). We keep the ECMWF-derived share so no extra
+  ADS request is needed per run.
+- **Chennai CAMS caveat**: at 0.4° the nearest land cell is 32 km west of the centre, so it represents the
+  inland west of the city, not the coast. This is an open question for the health engine (`open-questions.md`).
 
 ## 2. CAMS European air quality forecast (Amsterdam, incl. pollen)
 
@@ -78,7 +121,8 @@ Summary:
 - **Licence / attribution**: CC BY 4.0. "Generated using Copernicus Atmosphere Monitoring Service information [year]". DOI 10.24381/04a0b097. You must accept the licence on the dataset page. [docs]
 - **Resolution**: 0.4° (about 44 km), global. A whole city is about one grid cell. [docs]
 - **Runs / length**: 00 and 12 UTC, 5 days (120 h). Single-level fields every hour. [docs]
-- **Delay**: [open]. The 16 Nov 00z run was available on 17 Nov; same-day timing to be measured when scheduling.
+- **Delay**: [open]. The 16 Nov 00z run was available on 17 Nov; same-day timing to be measured when scheduling. Until then the pipeline asks for a run only 12 h after its base time (assumption, `cams_global.READY_AFTER`).
+- **Point** [C]: nearest land cell, land share from the ECMWF 0.1° land-sea mask: 13.2, 80.0 for Chennai (see "Point selection").
 - **Variables / units**: PM2.5 and PM10 at the surface in **kg m⁻³** (×1e9 → µg m⁻³). NO2 and O3 at the lowest model level in **kg kg⁻¹ (mass mixing ratio)**. To convert to µg m⁻³: multiply by air density ρ = p / (R_d · T), with p = surface pressure and T = 2 m temperature (both available in the same dataset), then by 1e9. [docs, conversion tested in `tests/test_convert.py`]
 - **Time stamp**: instantaneous at `valid_time` (GRIB convention for these fields).
 - **Pitfalls**:
@@ -108,6 +152,7 @@ Summary:
 
 - **Provider / dataset**: KNMI Data Platform, collections `hourly-in-situ-meteorological-observations` (near real time, since 2015) and `...-validated` (since 1951). [docs]
 - **Access**: EDR API `https://api.dataplatform.knmi.nl/edr/v1/collections/{collection}/locations/{station}` with `datetime=start/end` (optionally `parameter-name=...`); header `Authorization: <KNMI_EDR_API_KEY>`. Station list: `.../locations`. Schiphol location id is `0-20000-0-06240`. The response is CoverageJSON (`CoverageCollection` → `coverages[0].ranges[<param>].values`). One day for one station is 17 kB and takes 0.2 s. [live]
+- **Delay** [live, C]: the hourly EDR collection is **not** near real time: fetched at 13:31 UTC on 18 Nov 2026, the newest stamp was 00:00 UTC (≈ 13.5 h behind; looks like a once-a-day update). For fresh observations the 10-minute collection (Open Data API, `10-minute-in-situ-meteorological-observations`) would be needed [open].
 - **Limits**: registered users get 200 requests/s and 1000 requests/hour. The anonymous key gets 429 under normal use, so we use the personal keys only. [docs + known fact]
 - **Licence / attribution**: CC BY 4.0. "Source: KNMI (Royal Netherlands Meteorological Institute)". [docs]
 - **Variables** [live, from the parameter metadata]: `T` air temperature °C (past 1 minute, **at 1.5 m**, not 2 m), `TD` dew point °C (1.5 m), `U` relative humidity %, `FH` hourly mean wind speed m/s (10 m), `FF` past-10-minute wind speed m/s, `DD` wind direction ° (0 = calm, 990 = variable), `Q` hourly global radiation **J/cm²** (W m⁻² = Q × 10 000 / 3600).
@@ -144,15 +189,38 @@ Summary:
 
 - data.gov.in lists "Real time Air Quality Index from various locations" (hourly), but the page says the API for this resource does not exist and offers "Request API". No stable, documented CPCB API was found. Third-party relays exist (e.g. aqicn.org), but their licence and validation are unclear. **Decision needed later**; Chennai AQ stays forecast-only in V1.
 
-## 10. OpenAQ (Chennai observations): checked, not built
+## 10. OpenAQ (Chennai observations): INTERNAL USE ONLY
 
 - **What**: aggregator that republishes CPCB/TNPCB station data, API v3 `https://api.openaq.org/v3/...`.
-- **Access** [B]: needs a free account key in header `X-API-Key`; without it the API returns 401. **No key yet**, so
-  station coverage and delay for Chennai could not be measured. The check script picks up `OPENAQ_API_KEY` when set.
-- **Limits** [docs]: free key 60 requests/min, 2 000 requests/hour.
-- **Licence** [docs]: OpenAQ requires attribution to OpenAQ **and** to the original provider, and users must follow
-  each provider's own terms. The hosted API may not be used to build services that compete with OpenAQ. Higher limits
-  need a paid agreement. For CPCB data the upstream terms are India's Open Government Data licence (free reuse with
-  attribution, incl. commercial) [docs, data.gov.in; to confirm for the OpenAQ feed].
-- **Expected stations** (from CPCB/TNPCB lists, not yet confirmed in OpenAQ): Alandur, Velachery, Manali, Kodungaiyur,
-  Royapuram, Perungudi, Arumbakkam, Kathivakkam/Ennore. CPCB's portal is known for gaps and late uploads.
+- **Use** (decided after stage B): internal verification and later bias correction for Chennai only. OpenAQ data
+  never appears in output for partners: `get_hourly` leaves source `openaq` out unless `include_internal=True`.
+  OpenAQ data is **never committed** to this public repo; the test fixture is synthetic and labelled as such.
+- **Access** [live]: free account key in header `X-API-Key` (`OPENAQ_API_KEY`); without it 401. Limits: 60
+  requests/min, 2 000/hour (headers `x-ratelimit-*` confirm 60/min). `/v3/locations?coordinates=13.08,80.27&radius=25000`
+  then `/v3/sensors/{id}/hours`.
+- **Licence / terms** [docs]: OpenAQ asks for attribution to OpenAQ **and** to the original provider, and users
+  must follow each provider's terms. The hosted API may not be used to build services that compete with OpenAQ;
+  higher limits need a paid agreement. The `licenses` field is empty for the CPCB/TNPCB locations (AirNow:
+  "US Public Domain"). CPCB data upstream: India's Open Government Data licence [docs, to confirm for this feed].
+  Attribution if ever shown internally: "Data: CPCB / TNPCB via OpenAQ".
+- **Coverage** [live, 17 Nov 2026, last 7 days, 25 km around the centre]: 11 locations listed; 4 are dead (last
+  data 2016–2018: Alandur, IIT, US post). Active with PM2.5, PM10, NO2 and O3: Velachery (CPCB), Manali (CPCB),
+  Manali Village, Royapuram, Kodungaiyur, Arumbakkam (no O3), Perungudi (TNPCB). Hours with data: **90–99 %**
+  per sensor (Velachery PM 92 %, Royapuram PM 90 %, the rest 95–99 %). AirNow "Chennai" (PM2.5 only): 60 %.
+- **Delay** [live]: the newest complete hour ended about **2.3 h** before the query (raw 15-min values about
+  1.3–1.8 h). Hours are local Indian hours, so periods start at **:30 UTC** (IST = UTC+5:30); stored as
+  `valid_time_utc` = period start.
+- **Units and conversion**: PM and O3 come in µg/m³; **NO2 in ppb**. ppb → µg/m³ = ppb × M × p / (R × T) / 1000,
+  with the station's measured temperature and pressure for that hour where available, else 25 °C / 1013.25 hPa
+  (1 ppb NO2 = 1.88 µg/m³, O3 = 1.96 µg/m³). The `method` column records which (e.g. `ppb->ug/m3, measured T,
+  1013.25 hPa`). The stations report temperature but no pressure, so pressure is always the standard value.
+- **Duplicates**: stations list some pollutants twice (one sensor empty, one with values, sometimes in
+  different units). We keep the non-empty sensor; if both have values, the one with more hours, and log the other.
+
+## Test fixtures (public repo)
+
+`tests/fixtures/` holds small cut-down copies of real ECMWF, CAMS (Europe, global, land-sea mask), EEA and KNMI
+data. All are CC BY 4.0 and may be redistributed with attribution; `tests/fixtures/README.md` lists the origin and
+attribution per folder (EEA: exact licence wording still to confirm, see section 4). The OpenAQ fixture is
+**synthetic** (made-up values in the OpenAQ format); real OpenAQ data is never committed.
+

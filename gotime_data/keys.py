@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 KEYS_FILE = Path.home() / ".config" / "gotime" / "keys.env"
-KEY_NAMES = ["KNMI_API_KEY", "KNMI_EDR_API_KEY", "COPERNICUS_KEY", "ADS_URL", "CDS_URL"]
+KEY_NAMES = ["KNMI_API_KEY", "KNMI_EDR_API_KEY", "COPERNICUS_KEY", "ADS_URL", "CDS_URL", "OPENAQ_API_KEY"]
 
 
 def parse_env_file(path: Path) -> dict[str, str]:

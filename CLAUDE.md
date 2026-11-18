@@ -23,7 +23,7 @@ interface. The health engine reads data through the interface defined here.
 
 ## Stack
 
-Python 3.12, uv, ruff, pytest. Downloads: ecmwf-opendata (AWS mirror), cdsapi, httpx. Grids: xarray + cfgrib/eccodes,
+Python 3.12, uv, ruff, pytest. Downloads: own ECMWF byte-range fetcher (httpx; AWS first, ECMWF fallback), cdsapi, httpx. Grids: xarray + cfgrib/eccodes,
 h5netcdf. Raw files ~2 days; processed Parquet queried with DuckDB (~10 days live + archive). One storage root
 (`GOTIME_STORAGE_ROOT`, local now, `s3://` later via fsspec). Later: cron in Docker, FastAPI + Pydantic.
 Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
@@ -34,8 +34,12 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 - KNMI: the old daily endpoint is gone after 2026; use the Data Platform / EDR with personal keys (the anonymous key gets 429).
 - EEA E2a: `Start`/`End` are UTC+1 all year with no time zone attached (verified against Luchtmeetnet, winter and summer). City name is "Greater Amsterdam".
 - ECMWF open data: steps are 3-hourly (hourly rows are interpolated); `ssrd` is accumulated; 0.1° available since 2026-10-20.
-  Decided: 0.1°, 00 + 12 UTC, 0–96 h. Published at base + 9 h 34 min (0.25°: + 7 h 34 min). Own byte-range fetcher
-  (AWS throttled with 503 SlowDown; ecmwf-opendata retried silently). Mirror is a setting (aws / ecmwf).
+  Decided: 0.1°, 00/06/12/18 UTC, 0–96 h. Published 00/12 at base + 9 h 34 min, 06/18 at + 8 h 27 min (0.25°: + 7 h 34).
+  Own byte-range fetcher; AWS first, data.ecmwf.int fallback, every fallback logged. Serve newest complete cycle.
+- Point: nearest land cell (lsm >= 0.5). Chennai: ECMWF 13.1, 80.2; CAMS global 13.2, 80.0 (land share from ECMWF lsm).
+- OpenAQ: INTERNAL ONLY (never in partner output; never commit its data; fixtures synthetic). NO2 in ppb -> ug/m3
+  with measured T/p else 25 C/1013.25 hPa, recorded in `method`. Duplicate sensors: keep non-empty / most hours.
+- Public GitHub repo `JonathanThangadurai/Ferrywellco-Engine` (origin). Package stays `gotime_data`.
 - CAMS global: NO2/O3 only at `model_level` 137 (separate request; silently dropped otherwise), kg/kg → µg/m³ via sp and t2m.
 - KNMI EDR: time stamp = end of hour for hourly sums/means; `RH` is precipitation (humidity is `U`); T at 1.5 m; Q in J/cm².
 - CDS/ADS: one request at a time per dataset; abandoned jobs stay queued and block new ones ("Maximum number queued requests").
@@ -51,6 +55,6 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 ## Stage status
 
 - [x] Stage A: facts and design (skeleton, data-sources, pipeline design, open questions). Approved 2026-11-17.
-- [x] Stage B: access check (`scripts/check_access.py`) and size test (`docs/size-test.md`). Awaiting review.
-  Open: ERA5 size (CDS queue), OpenAQ needs a key.
-- [ ] Stage C: `gotime_data/` package, read interface, tests, README.
+- [x] Stage B: access check and size test. Approved 2026-11-17. Stages A+B pushed to origin/main on 2026-11-17.
+- [x] Stage C: `gotime_data/` package (sources, store, schema, read, cli), tests, README. Awaiting review; not pushed.
+  `docs/data-interface.md` stays "draft, pending health-engine review" until confirmed.
