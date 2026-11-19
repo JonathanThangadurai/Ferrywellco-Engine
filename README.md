@@ -44,8 +44,8 @@ uv run gotime-api serve --port 8000       # POST /v1/guidance, GET /v1/coverage,
 uv run python scripts/load_test.py --key-file <file>   # p50/p95 latency and requests/s
 ```
 
-Three separate processes share only storage: ingest, then precompute (`gotime_engine/`: the engine protocol for
-the health engine and a clearly synthetic `SandboxEngine`), then the API (`gotime_api/`). The API serves the
+Three separate processes share only storage: ingest, then precompute (`gotime_engine/`: the protocol where the
+health engine plugs in, and a clearly synthetic `SandboxEngine`), then the API (`gotime_api/`). The API serves the
 snapshot from memory. API keys live hashed in `GOTIME_API_KEYS_FILE` (default `~/.config/gotime/api_keys.json`,
 outside the repo). Settings are in `config/serving.yaml`.
 
@@ -69,7 +69,6 @@ OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hour
 
 - `docs/data-sources.md`: every source, verified live: access, licence, units, time conventions, pitfalls.
 - `docs/data-pipeline-design.md`: stages, canonical table, retention, size and memory estimates.
-- `docs/open-questions.md`: questions for the algorithm side.
 - `docs/size-test.md`: measured sizes, times and memory; storage recommendation.
 - `docs/data-interface.md`: how the algorithm reads data (draft, pending health-engine review).
 - `docs/api-design.md`: GOTime API design, stage D1 (draft for review).

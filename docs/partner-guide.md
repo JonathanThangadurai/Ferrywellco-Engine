@@ -1,7 +1,7 @@
 # GOTime API: partner guide (sandbox, version 0.1.0)
 
-> **Draft.** Request and response fields are still to agree with the partner (`openapi.yaml`, questions A1–A6 in
-> `open-questions.md`). In the sandbox every answer is a **synthetic example, not guidance**: `mode` is
+> **Draft.** Request and response fields are still to agree with the partner (`openapi.yaml`; open questions: partner
+> integration). In the sandbox every answer is a **synthetic example, not guidance**: `mode` is
 > `sandbox` and every guidance reason starts with `sandbox_`.
 
 GOTime gives wellness guidance on when and how to be active outside. It is not a health service.

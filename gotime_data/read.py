@@ -88,7 +88,7 @@ def mean_24h(df: pd.DataFrame, variable: str, min_hours: int = 18) -> pd.DataFra
     """Rolling 24-hour mean: for each hour, the mean of that hour and the 23 before it.
 
     Returns valid_time_utc (last hour of the window), value, n_hours; value is null when fewer than
-    min_hours hours have data (placeholder threshold; open question 9, health engine).
+    min_hours hours have data (placeholder threshold; open question: health engine).
     """
     out = []
     for key, part in df[df["variable"] == variable].groupby(GROUP, dropna=False):
