@@ -1,0 +1,96 @@
+# Every push and pull request. Needs no secrets: all tests run offline on saved fixtures.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, tests, contract check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.26"
+      - run: uv sync --frozen
+      - name: Ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: OpenAPI document is valid
+        run: uvx --from openapi-spec-validator==0.7.1 openapi-spec-validator docs/openapi.yaml
+      - name: Tests (unit, contract, golden, property-based)
+        run: uv run pytest -q
+
+  audit:
+    name: Known vulnerabilities (pip-audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.26"
+      - run: uv export --frozen --no-dev --no-hashes --no-emit-project --format requirements-txt -o requirements.txt
+      - run: uvx pip-audit==2.7.3 --requirement requirements.txt --no-deps --disable-pip --progress-spinner off
+
+  docker-e2e:
+    name: Docker build and end-to-end (Newman)
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.26"
+      - run: uv sync --frozen --no-dev
+      - name: Build image
+        run: docker build -t gotime:ci .
+      - name: Test keys (one active, one revoked; throwaway, CI only)
+        run: |
+          export GOTIME_API_KEYS_FILE="$RUNNER_TEMP/keys/api_keys.json"
+          uv run gotime-api keys create --partner e2e > /dev/null
+          uv run gotime-api keys create --partner e2e-revoked > /dev/null
+          revoked_id="$(uv run gotime-api keys list | awk '/e2e-revoked/ {print $1}')"
+          uv run gotime-api keys revoke "$revoked_id" > /dev/null
+          key="$(cat $(ls "$RUNNER_TEMP"/keys/new_key_*.txt | grep -v "$revoked_id"))"
+          revoked="$(cat "$RUNNER_TEMP/keys/new_key_${revoked_id}.txt")"
+          echo "::add-mask::$key"
+          echo "::add-mask::$revoked"
+          rm "$RUNNER_TEMP"/keys/new_key_*.txt
+          { echo "E2E_KEY=$key"; echo "E2E_REVOKED=$revoked"; } >> "$GITHUB_ENV"
+      - name: Start three API containers on the fixed snapshot (fresh, degraded, unavailable clocks)
+        run: |
+          start() {
+            docker run -d --name "api$1" -p "$1:8000" --user "$(id -u):$(id -g)" --read-only --tmpfs /tmp \
+              -e GOTIME_ENV=test -e GOTIME_TEST_NOW="$2" \
+              -v "$PWD/tests/fixtures/e2e:/data:ro" -v "$RUNNER_TEMP/keys:/run/gotime/keys:ro" gotime:ci
+          }
+          start 8001 2026-11-19T10:00:00+00:00
+          start 8002 2026-11-19T20:00:00+00:00
+          start 8003 2026-11-20T10:00:00+00:00
+          for port in 8001 8002 8003; do
+            for i in $(seq 1 60); do curl -sf "localhost:$port/v1/ready" > /dev/null && break; sleep 1; done
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Postman collection (Newman)
+        run: |
+          npx -y newman@6.2.1 run docs/postman/gotime.postman_collection.json \
+            -e tests/e2e/ci.postman_environment.json \
+            --env-var "apiKey=$E2E_KEY" --env-var "revokedKey=$E2E_REVOKED"
+      - name: Container logs
+        if: failure()
+        run: for c in api8001 api8002 api8003; do echo "== $c"; docker logs "$c" | tail -50; done

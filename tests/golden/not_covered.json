@@ -1,0 +1,10 @@
+{
+  "body": {
+    "code": "not-covered",
+    "detail": "No supported location within its radius; see /v1/coverage.",
+    "status": 422,
+    "title": "This place is not covered",
+    "type": "urn:gotime:problem:not-covered"
+  },
+  "status": 422
+}

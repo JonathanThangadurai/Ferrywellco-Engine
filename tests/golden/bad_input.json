@@ -1,0 +1,15 @@
+{
+  "body": {
+    "code": "invalid-request",
+    "errors": [
+      {
+        "field": "duration_min",
+        "reason": "Input should be greater than or equal to 10"
+      }
+    ],
+    "status": 422,
+    "title": "The request is not valid",
+    "type": "urn:gotime:problem:invalid-request"
+  },
+  "status": 422
+}

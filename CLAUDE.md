@@ -12,7 +12,8 @@ interface. The health engine reads data through the interface defined here.
 - Started from scratch. Never read, copy or imitate code from the old `gotime-engine` repo. Only `climatology/` (data) was copied.
 - Python only. Work in stages and **STOP for review after each stage**.
 - Git: commit as `Jonathan Thangadurai <315550690+JonathanThangadurai@users.noreply.github.com>` (set in repo config).
-  No co-author lines, no tool attribution. **Never push without explicit approval; check the GitHub remote first.**
+  No co-author lines, no tool attribution. **Never push to main.** Since D3: work on a feature branch, push the
+  branch, open a PR with `gh pr create`, wait for green CI, report the link; merging is done by hand, not by the agent.
 - Keys: read only from the environment; if unset, parse `~/.config/gotime/keys.env` (`gotime_data/keys.py`).
   ERA5: `cdsapi.Client(url=CDS_URL, key=COPERNICUS_KEY)`; CAMS: `cdsapi.Client(url=ADS_URL, key=COPERNICUS_KEY)`. Never print, log, echo, cat or
   commit a key; report presence only ("KNMI_API_KEY set: yes/no"). On 401/403, stop and report whether it is the key or a
@@ -62,6 +63,10 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
   `docs/data-interface.md` stays "draft, pending health-engine review" until confirmed.
 - [x] Stage D1: API design (`docs/api-design.md`, `docs/engine-interface.md`, `docs/openapi.yaml`).
   Guidance science belongs to the health engine; the API only provides the plug-in point and a SandboxEngine.
-- [ ] Stage D2: `gotime_api/` (FastAPI), `gotime_engine/` (protocol, SandboxEngine, precompute, snapshot),
-  contract tests against docs/openapi.yaml, `scripts/load_test.py`. Awaiting review.
-- [ ] Stage D3: Docker/compose/Caddy, scheduler, observability, backups, CI, operations and partner docs.
+- [x] Stage D2: `gotime_api/`, `gotime_engine/`, contract tests, load test. Approved and pushed to main 2026-11-19.
+  Decisions: freshness ECMWF 16/30 h, CAMS EU 36/60 h, CAMS global 24/48 h (review after two weeks of logs);
+  pollen_not_assessed (degraded only with hay_fever=yes); radius Amsterdam 15 km, Chennai 20 km; one mode per key.
+- [ ] Stage D3: Docker/compose/Caddy, `gotime_ops/` (scheduler, heartbeats, quality, monitor, backup, source
+  checks), CI + nightly/weekly source checks, golden/property/e2e tests, docs. Branch `d3-ops`, PR awaiting review.
+- GitHub Actions secrets: KNMI_API_KEY, KNMI_EDR_API_KEY, COPERNICUS_KEY, OPENAQ_API_KEY; variables: ADS_URL, CDS_URL.
+  Heartbeats: HC_PING_INGEST/PRECOMPUTE/MONITOR (env; never log or commit).

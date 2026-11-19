@@ -98,8 +98,9 @@ manifest, because the age grows while the snapshot is served. Thresholds are in 
 
 ## 5. Scaling path
 
-1. **Now:** one VPS (4 GB). Caddy terminates HTTPS and proxies to one uvicorn process. Cron runs ingest and
-   precompute; storage is local disk.
+1. **Now:** one VPS (4 GB), `docker-compose.yml`. Caddy terminates HTTPS and proxies to the API container (2
+   uvicorn workers). The scheduler container runs ingest and precompute per forecast cycle; storage is local
+   disk (`docs/operations.md`).
 2. **More traffic:** run more API copies (processes or containers) behind Caddy. They are stateless and each
    loads the snapshot. Rate limits are per copy at first (limit ÷ copies); later they move to a shared counter
    (e.g. Redis) or Caddy.
