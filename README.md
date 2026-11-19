@@ -47,8 +47,10 @@ OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hour
 - `docs/open-questions.md`: questions for the algorithm side.
 - `docs/size-test.md`: measured sizes, times and memory; storage recommendation.
 - `docs/data-interface.md`: how the algorithm reads data (draft, pending Tilman's review).
+- `docs/api-design.md`: GOTime API design, stage D1 (draft for review).
+- `docs/engine-interface.md`: where the guidance engine plugs in (draft, to agree with Tilman).
+- `docs/openapi.yaml`: API 0.1.0 draft (to agree with AEIVA).
 - `docs/architecture/gotime-data-architecture-v1.drawio`: architecture diagram (open with [diagrams.net](https://app.diagrams.net/)).
-- `docs/data-interface.md`: how the algorithm reads data (draft, pending Tilman's review).
 
 ## Environment variables (names only; never commit values)
 
