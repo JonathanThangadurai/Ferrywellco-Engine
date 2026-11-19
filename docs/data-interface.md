@@ -1,7 +1,6 @@
 # Data interface (for the algorithm side)
 
-> **Status: DRAFT, pending Tilman's review.** Nothing here is final until Tilman confirms. Questions that shape it are
-> in `open-questions.md`.
+> **Status: DRAFT, pending health-engine review.** Nothing here is final until the health-engine side confirms it.
 
 This is how the algorithm reads data from the data layer: Python functions that return a pandas DataFrame in the
 canonical table format (`data-pipeline-design.md`). Behind them is Parquet read with DuckDB; you never need to know
@@ -36,7 +35,7 @@ Arguments:
   partners see.
 - `include_alternatives` (default `False`): alternative grid cells are left out. Today there is one: the coastal
   CAMS global cell for Chennai (`site_id = grid:cams_global:chennai:coastal`), stored next to the default land
-  cell so you can compare them (open question 18).
+  cell so you can compare them (open question: health engine).
 
 Returns one row per (valid hour, variable, source[, site]) with these columns:
 
@@ -90,7 +89,7 @@ o3 = max_8h_mean(df, "o3_ugm3", tz="Europe/Amsterdam", min_hours=6, min_windows=
   (needs `min_windows` valid windows). Columns `local_date`, `value`, `n_windows`, `n_hours`. Local days are 23,
   24 or 25 hours long on daylight-saving days; this is handled and tested.
 - Averages are computed per source and site; missing hours are skipped and counted.
-- Coverage thresholds are placeholders until Tilman answers question 9.
+- Coverage thresholds are placeholders (open question: health engine).
 
 ## Local time
 

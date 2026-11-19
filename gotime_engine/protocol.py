@@ -1,7 +1,8 @@
 """Where the guidance engine plugs in (docs/engine-interface.md).
 
-The science is Tilman's. This file only fixes the shape of what goes in and comes out, so the precompute
-job and the API can call any engine the same way. Every output field is a draft, to agree with Tilman.
+The science belongs to the health engine. This file only fixes the shape of what goes in and comes out, so
+the precompute job and the API can call any engine the same way. Every output field is a draft, to agree
+with the health engine.
 
 Two steps, because request options such as start times and duration are continuous:
     assess(...)  once per forecast cycle, per location, local date and profile (slow is fine)
@@ -15,7 +16,8 @@ from typing import Any, Literal, Protocol
 
 import pandas as pd
 
-ACTIVITY_TYPES = ["walk", "run", "cycle", "outdoor_workout"]  # draft, to agree with AEIVA and Tilman
+# Draft list, to agree with the partner and the health engine.
+ACTIVITY_TYPES = ["walk", "run", "cycle", "outdoor_workout"]
 YES_NO_UNKNOWN = ["yes", "no", "unknown"]
 MODES = ("live", "sandbox")
 
@@ -60,7 +62,7 @@ class WindowOptions:
 
 @dataclass
 class Reason:
-    """Why the result is what it is. Draft, to agree with Tilman."""
+    """Why the result is what it is. Draft, to agree with the health engine."""
 
     code: str
     source: str
@@ -70,7 +72,7 @@ class Reason:
 
 @dataclass
 class GuidanceResult:
-    """What choose() returns. Every field: draft, to agree with Tilman.
+    """What choose() returns. Every field: draft, to agree with the health engine.
 
     window_status 'found' -> window_start, window_end and latest_start are set (aware datetimes).
     window_status 'none'  -> they are None and intensity_hint is None.

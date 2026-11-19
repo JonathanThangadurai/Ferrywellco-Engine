@@ -1,7 +1,7 @@
 # GOTime API design (stage D1)
 
-> **Status: DRAFT for Jon's review.** The request and response fields are a draft to agree with AEIVA
-> (`openapi.yaml`). The engine's output fields are a draft to agree with Tilman (`engine-interface.md`). This
+> **Status: DRAFT for review.** The request and response fields are a draft to agree with the partner
+> (`openapi.yaml`). The engine's output fields are a draft to agree with the health engine (`engine-interface.md`). This
 > document builds only the place where the guidance science plugs in; it does not design that science.
 
 ## 1. Principle and processes
@@ -27,7 +27,7 @@ through storage (`GOTIME_STORAGE_ROOT`), never directly.
 Why the engine has two steps: request options such as earliest/latest start and duration are continuous, so
 answers cannot be precomputed for every combination. The engine assesses hours per discrete *profile*
 (activity type × heat_adapted × hay_fever) once per cycle. Then a fast, pure `choose` picks the window per
-request. Both steps are Tilman's code (`engine-interface.md`).
+request. Both steps belong to the health engine (`engine-interface.md`).
 
 ## 2. Serving snapshot
 
@@ -47,7 +47,7 @@ request. Both steps are Tilman's code (`engine-interface.md`).
   started with. If the new snapshot fails to load, the API keeps the old one and logs an error.
 - **Retention:** the last 4 snapshots per mode are kept for rollback; rolling back means writing an older id
   to `CURRENT`.
-- **Modes:** `sandbox` (SandboxEngine, clearly synthetic) and `live` (Tilman's engine, once it exists). Each
+- **Modes:** `sandbox` (SandboxEngine, clearly synthetic) and `live` (the health engine, once it exists). Each
   has its own snapshot. Each API key has one mode, and the response always states its `mode`. A live key gets
   503 `snapshot-unavailable` until a live engine exists.
 
@@ -190,4 +190,4 @@ never echo input values.
 3. Radius per location: Amsterdam 15 km, Chennai 20 km.
 4. One mode per API key (sandbox or live), enforced at authentication.
 
-Questions for Tilman and AEIVA are in `open-questions.md`.
+Open questions: health engine (`engine-interface.md`) and partner integration (`partner-guide.md`).

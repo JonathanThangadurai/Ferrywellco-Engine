@@ -18,7 +18,7 @@ monitoring, CI) on branch `d3-ops`, awaiting review.**
    Parquet (`live/`, 10 days; then `archive/`, kept). Chosen grid cells and stations go to the sites table, forecast
    cycles (issue, publish, complete) to the cycles table.
 3. **read**: `gotime_data.read.get_hourly(...)` plus 24-hour and maximum 8-hour means, computed on read
-   (`docs/data-interface.md`, draft pending Tilman's review).
+   (`docs/data-interface.md`, draft pending health-engine review).
 4. **clean**: retention (raw 2 days, live 10 days, then archive).
 
 ## How to run
@@ -38,14 +38,14 @@ uv run ruff check .
 
 ```
 uv run gotime-api precompute              # after ingest: new serving snapshot if the forecast cycles changed
-uv run gotime-api keys create --partner aeiva --mode sandbox   # key written once to a 600 file, never printed
+uv run gotime-api keys create --partner partner-app --mode sandbox   # key written once to a 600 file, never printed
 uv run gotime-api keys list | revoke <key_id>
 uv run gotime-api serve --port 8000       # POST /v1/guidance, GET /v1/coverage, /v1/health, /v1/ready
 uv run python scripts/load_test.py --key-file <file>   # p50/p95 latency and requests/s
 ```
 
-Three separate processes share only storage: ingest, then precompute (`gotime_engine/`: the engine protocol for
-Tilman's engine and a clearly synthetic `SandboxEngine`), then the API (`gotime_api/`). The API serves the
+Three separate processes share only storage: ingest, then precompute (`gotime_engine/`: the protocol where the
+health engine plugs in, and a clearly synthetic `SandboxEngine`), then the API (`gotime_api/`). The API serves the
 snapshot from memory. API keys live hashed in `GOTIME_API_KEYS_FILE` (default `~/.config/gotime/api_keys.json`,
 outside the repo). Settings are in `config/serving.yaml`.
 
@@ -69,13 +69,12 @@ OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hour
 
 - `docs/data-sources.md`: every source, verified live: access, licence, units, time conventions, pitfalls.
 - `docs/data-pipeline-design.md`: stages, canonical table, retention, size and memory estimates.
-- `docs/open-questions.md`: questions for the algorithm side.
 - `docs/size-test.md`: measured sizes, times and memory; storage recommendation.
-- `docs/data-interface.md`: how the algorithm reads data (draft, pending Tilman's review).
+- `docs/data-interface.md`: how the algorithm reads data (draft, pending health-engine review).
 - `docs/api-design.md`: GOTime API design, stage D1 (draft for review).
-- `docs/engine-interface.md`: where the guidance engine plugs in (draft, to agree with Tilman).
-- `docs/openapi.yaml`: API 0.1.0 draft (to agree with AEIVA).
-- `docs/partner-guide.md`: how AEIVA uses the sandbox; `docs/postman/`: Postman collection and environment template.
+- `docs/engine-interface.md`: where the guidance engine plugs in (draft, to agree with the health engine).
+- `docs/openapi.yaml`: API 0.1.0 draft (to agree with the partner).
+- `docs/partner-guide.md`: how the partner app uses the sandbox; `docs/postman/`: Postman collection and environment template.
 - `docs/operations.md`: deploying on the server, keys, alerts, backups.
 - `docs/testing.md`: what runs where and when.
 - `docs/architecture/gotime-data-architecture-v1.drawio`: architecture diagram (open with [diagrams.net](https://app.diagrams.net/)).

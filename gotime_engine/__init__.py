@@ -1,4 +1,4 @@
-"""GOTime guidance engines: the protocol (where Tilman's engine plugs in) and the sandbox stand-in.
+"""GOTime guidance engines: the protocol (where the health engine plugs in) and the sandbox stand-in.
 
 docs/engine-interface.md describes the interface. Engines are looked up by name, so the API can rebuild
 the engine that made a snapshot.

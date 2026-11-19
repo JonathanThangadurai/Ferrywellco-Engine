@@ -65,7 +65,7 @@ Bias fitting selects pairs through this table (e.g. only `background` stations i
 - Gaps between 3-hourly ECMWF steps are filled by linear interpolation in time with `status = interpolated`. No other
   source is interpolated in V1.
 - Averages (24-hour, maximum 8-hour) are computed on read. The result carries a coverage count (e.g. 18 of 24 hours); the
-  threshold for "valid" is a question for Tilman (see `open-questions.md`).
+  threshold for "valid" is an open question: health engine.
 - Data age is counted from `issue_time_utc`, not from the download time.
 
 ## Retention and formats

@@ -1,14 +1,14 @@
-# Guidance engine interface (for Tilman)
+# Health-engine interface
 
-> **Status: DRAFT.** Every output field below is marked *draft, to agree with Tilman*. The data layer and the
+> **Status: DRAFT.** Every output field below is marked *draft, to agree with the health engine*. The data layer and the
 > API only define where the engine plugs in. All guidance science (what counts as a good hour, thresholds,
-> reasons) is Tilman's. The code here will contain only a `SandboxEngine` with clearly synthetic output, so the
+> reasons) belongs to the health engine. The code here will contain only a `SandboxEngine` with clearly synthetic output, so the
 > API can be built and tested before the real engine exists.
 
 ## Why two methods
 
 The API answers each request in under 100 ms from a snapshot built once per forecast cycle (`api-design.md`).
-Some request options are continuous (earliest/latest start, duration), so we cannot precompute every answer.
+Some request options are continuous (earliest/latest start, duration), so not every answer can be precomputed.
 The engine therefore has two methods:
 
 1. `assess` (slow is fine, runs once per cycle in the precompute job): judges every hour of one local date for
@@ -16,7 +16,7 @@ The engine therefore has two methods:
 2. `choose` (must be fast, runs per request in the API): picks the window from the ready assessment and the
    window options.
 
-If you prefer a different split, tell us; only the boundary matters to the API.
+A different split is possible; only the boundary matters to the API.
 
 ## Protocol
 
@@ -64,7 +64,7 @@ differ, it does not load the snapshot.
 
   | field | values | note |
   |---|---|---|
-  | `activity_type` | `walk`, `run`, `cycle`, `outdoor_workout` | draft list, to agree with AEIVA and Tilman |
+  | `activity_type` | `walk`, `run`, `cycle`, `outdoor_workout` | draft list, to agree with the partner and the health engine |
   | `heat_adapted` | `yes`, `no`, `unknown` | |
   | `hay_fever` | `yes`, `no`, `unknown` | |
 
@@ -75,7 +75,7 @@ differ, it does not load the snapshot.
   them in Amsterdam on daylight-saving days. In Chennai (UTC+5:30) there are 25, because the first and last
   hour lie half outside the day.
 
-## Outputs (all fields: draft, to agree with Tilman)
+## Outputs (all fields: draft, to agree with the health engine)
 
 `Assessment` is whatever `choose` needs. It must be JSON-serialisable, because it is stored in the snapshot.
 Suggested: one entry per local hour with a code or score, plus the reasons that apply to that hour. The API
@@ -85,17 +85,17 @@ never looks inside it.
 
 | field | type | meaning | status |
 |---|---|---|---|
-| `window_status` | `found` \| `none` | whether any window fits the options | draft, to agree with Tilman |
-| `window_start`, `window_end` | aware datetime | the suggested window; None when `none` | draft, to agree with Tilman |
-| `latest_start` | aware datetime | latest start that still gives the same intensity hint | draft, to agree with Tilman |
-| `intensity_hint` | code or None | e.g. `as_planned`, `go_easier`, `light_only` (placeholder codes); None when no window | draft, to agree with Tilman |
-| `indoor_alternative` | `suggested` \| `not_suggested` | whether to offer an indoor option | draft, to agree with Tilman |
-| `reasons[]` | list | why; ordered by importance | draft, to agree with Tilman |
-| `reasons[].code` | stable code | e.g. `heat_high`, `pm25_elevated`, `pollen_birch_high` (placeholders) | draft, to agree with Tilman |
-| `reasons[].params` | dict | numbers behind the reason, keys with units (`t2m_c`, `pm25_ugm3`) | draft, to agree with Tilman |
-| `reasons[].source` | source id | `ecmwf_ifs`, `cams_eu`, `cams_global` | draft, to agree with Tilman |
-| `reasons[].text` | optional str | English text; partners may translate by `code` | draft, to agree with Tilman |
-| `variables_used` | list[str] | which variables shaped the result (for data status) | draft, to agree with Tilman |
+| `window_status` | `found` \| `none` | whether any window fits the options | draft, to agree with the health engine |
+| `window_start`, `window_end` | aware datetime | the suggested window; None when `none` | draft, to agree with the health engine |
+| `latest_start` | aware datetime | latest start that still gives the same intensity hint | draft, to agree with the health engine |
+| `intensity_hint` | code or None | e.g. `as_planned`, `go_easier`, `light_only` (placeholder codes); None when no window | draft, to agree with the health engine |
+| `indoor_alternative` | `suggested` \| `not_suggested` | whether to offer an indoor option | draft, to agree with the health engine |
+| `reasons[]` | list | why; ordered by importance | draft, to agree with the health engine |
+| `reasons[].code` | stable code | e.g. `heat_high`, `pm25_elevated`, `pollen_birch_high` (placeholders) | draft, to agree with the health engine |
+| `reasons[].params` | dict | numbers behind the reason, keys with units (`t2m_c`, `pm25_ugm3`) | draft, to agree with the health engine |
+| `reasons[].source` | source id | `ecmwf_ifs`, `cams_eu`, `cams_global` | draft, to agree with the health engine |
+| `reasons[].text` | optional str | English text; partners may translate by `code` | draft, to agree with the health engine |
+| `variables_used` | list[str] | which variables shaped the result (for data status) | draft, to agree with the health engine |
 
 The API adds `mode`, `location`, `data` (freshness and attribution) and `request_id` itself; the engine does
 not.
@@ -118,12 +118,12 @@ not.
 - `choose` picks the earliest start, in 15-minute steps, with the lowest level, where every hour the
   activity touches has data.
 
-It exists so partners can integrate and we can test the API end to end. It is not a first version of the
+It exists so partners can integrate and the API can be tested end to end. It is not a first version of the
 science.
 
-## Questions for Tilman
+## Open questions: health engine
 
-1. Does the assess/choose split work for you? What should `Assessment` hold per hour?
+1. Does the assess/choose split fit the health engine? What should `Assessment` hold per hour?
 2. Which profile options change the result (activity type, heat_adapted, hay_fever, others)?
-3. Intensity hint and reason codes: your list.
-4. Do you need observations too (e.g. the last measured hours) as input, or forecasts only?
+3. Intensity hint and reason codes: which list?
+4. Does the health engine need observations too (e.g. the last measured hours) as input, or forecasts only?

@@ -1,7 +1,7 @@
 # GOTime API settings (docs/api-design.md). Placeholder values until agreed.
 
 # Modes this API serves. Each has its own snapshot (serving/<mode>/CURRENT). "live" is added once
-# Tilman's engine exists.
+# the health engine exists.
 modes: [sandbox]
 
 # Data age = request time - forecast issue time, in hours. Up to `ok`: ok; up to `degraded`: degraded;

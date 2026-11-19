@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="c3" parent="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=11;" value="&lt;b style=&#39;font-size:16px&#39;&gt;GOTime data architecture - discussion version (v0)&lt;/b&gt;&lt;br&gt;Built on Tilman&#39;s concept diagram. Changes are proposals for discussion." vertex="1">
+        <mxCell id="c3" parent="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;fontSize=11;" value="&lt;b style=&#39;font-size:16px&#39;&gt;GOTime data architecture - discussion version (v0)&lt;/b&gt;&lt;br&gt;Built on the health-engine concept diagram. Changes are proposals for discussion." vertex="1">
           <mxGeometry height="40" width="900" x="40" as="geometry" />
         </mxCell>
         <mxCell id="c4" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=26;fontStyle=1;fillColor=#ffffff;strokeColor=#666666;fontColor=#000000;" value="Legend" vertex="1">
@@ -19,7 +19,7 @@
         <mxCell id="c7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontColor=#555555;" value="Later" vertex="1">
           <mxGeometry height="30" width="140" x="60" y="136" as="geometry" />
         </mxCell>
-        <mxCell id="c8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" value="Jessie&#39;s algo" vertex="1">
+        <mxCell id="c8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" value="Wind/route service" vertex="1">
           <mxGeometry height="30" width="140" x="210" y="136" as="geometry" />
         </mxCell>
         <mxCell id="c10" parent="1" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;startSize=28;fontStyle=1;fillColor=#ffffff;strokeColor=#666666;fontColor=#000000;swimlaneFillColor=#ffffff;" value="Meteorological data" vertex="1">
@@ -121,10 +121,10 @@
         <mxCell id="c45" parent="c40" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fontSize=11;fillColor=#ffffff;strokeColor=#666666;fontColor=#000000;" value="Health model beta values&lt;br&gt;&lt;span style=&quot;font-size:10px&quot;&gt;Stafoggia 2023, population level&lt;/span&gt;" vertex="1">
           <mxGeometry height="110" width="160" x="300" y="160" as="geometry" />
         </mxCell>
-        <mxCell id="c46" parent="c40" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontColor=#555555;" value="Individual modifiers&lt;br&gt;&lt;span style=&quot;font-size:10px&quot;&gt;e.g effort, recent heat exposure; decided with AEIVA&lt;/span&gt;" vertex="1">
+        <mxCell id="c46" parent="c40" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontColor=#555555;" value="Individual modifiers&lt;br&gt;&lt;span style=&quot;font-size:10px&quot;&gt;e.g effort, recent heat exposure; decided with the partner&lt;/span&gt;" vertex="1">
           <mxGeometry height="80" width="200" x="40" y="310" as="geometry" />
         </mxCell>
-        <mxCell id="c47" parent="c40" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontColor=#555555;" value="Body estimates from AEIVA&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" vertex="1">
+        <mxCell id="c47" parent="c40" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;fontColor=#555555;" value="Body estimates from the partner app&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="80" width="200" x="280" y="310" as="geometry" />
         </mxCell>
         <mxCell id="e23" edge="1" parent="c40" source="c50" style="edgeStyle=none;rounded=0;html=1;endArrow=classic;fontSize=10;dashed=1;strokeColor=#999999;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" value="route_profile">
@@ -139,7 +139,7 @@
         <mxCell id="c49" parent="c48" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#666666;fontColor=#000000;" value="Worker&lt;br&gt;&lt;span style=&#39;font-size:10px&#39;&gt;API keys, rate limits&lt;/span&gt;" vertex="1">
           <mxGeometry height="70" width="170" x="65" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="c50" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" value="AeroWise route profile (Jessie)&lt;br&gt;&lt;span style=&#39;font-size:10px&#39;&gt;headwind, gusts per 200 m, separate service, planned&lt;/span&gt;" vertex="1">
+        <mxCell id="c50" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" value="Wind/route service: route profile&lt;br&gt;&lt;span style=&#39;font-size:10px&#39;&gt;headwind, gusts per 200 m, separate service, planned&lt;/span&gt;" vertex="1">
           <mxGeometry height="80" width="250" x="1540" y="1000" as="geometry" />
         </mxCell>
         <mxCell id="c51" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=26;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" value="Partner App - End User" vertex="1">

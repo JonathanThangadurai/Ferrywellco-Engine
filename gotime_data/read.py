@@ -1,4 +1,4 @@
-"""Read interface for the algorithm side (docs/data-interface.md, draft pending Tilman's review).
+"""Read interface for the algorithm side (docs/data-interface.md, draft pending health-engine review).
 
     get_hourly(location_id, start_utc, end_utc, variables)  -> canonical table (pandas DataFrame)
     mean_24h(df, variable)                                  -> rolling 24-hour mean per hour
@@ -88,7 +88,7 @@ def mean_24h(df: pd.DataFrame, variable: str, min_hours: int = 18) -> pd.DataFra
     """Rolling 24-hour mean: for each hour, the mean of that hour and the 23 before it.
 
     Returns valid_time_utc (last hour of the window), value, n_hours; value is null when fewer than
-    min_hours hours have data (placeholder threshold until Tilman decides, open question 9).
+    min_hours hours have data (placeholder threshold; open question: health engine).
     """
     out = []
     for key, part in df[df["variable"] == variable].groupby(GROUP, dropna=False):

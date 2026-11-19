@@ -1,8 +1,9 @@
 """SandboxEngine: plausible but clearly synthetic output, so partners can integrate before the real engine.
 
-This is NOT a first version of the guidance science (that is Tilman's). It uses no thresholds from
-literature: each hour is only compared with the other hours of the same day ("warmer than most hours
-today"), and every reason code starts with `sandbox_` and carries the text "Sandbox example, not guidance."
+This is NOT a first version of the guidance science (that belongs to the health engine). It uses no
+thresholds from literature: each hour is only compared with the other hours of the same day ("warmer than
+most hours today"), and every reason code starts with `sandbox_` and carries the text "Sandbox example, not
+guidance."
 """
 
 from datetime import UTC, date, datetime, timedelta
@@ -22,7 +23,7 @@ from .protocol import (
 
 SANDBOX_TEXT = "Sandbox example, not guidance."
 POLLEN = [f"pollen_{p}_gm3" for p in ("alder", "birch", "grass", "mugwort", "olive", "ragweed")]
-HINTS = {0: "as_planned", 1: "go_easier", 2: "light_only"}  # placeholder codes, to agree with Tilman
+HINTS = {0: "as_planned", 1: "go_easier", 2: "light_only"}  # placeholders, to agree with the health engine
 STEP = timedelta(minutes=15)  # candidate start times are tried every 15 minutes
 
 

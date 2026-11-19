@@ -70,14 +70,14 @@ in `gotime_ops/schedule.py`.
 
    The longest normal gap between ECMWF cycles is about 7 h (14:37 to 21:44 UTC).
 9. **Build:** `docker compose build`.
-10. **First keys:** the monitor key and AEIVA's sandbox key. Each new key is written once to a file only root
+10. **First keys:** the monitor key and the partner's sandbox key. Each new key is written once to a file only root
     and uid 10001 can read:
     ```
     docker run --rm -v /etc/gotime/keys:/run/gotime/keys gotime:latest gotime-api keys create --partner monitor --mode sandbox
-    docker run --rm -v /etc/gotime/keys:/run/gotime/keys gotime:latest gotime-api keys create --partner aeiva --mode sandbox
+    docker run --rm -v /etc/gotime/keys:/run/gotime/keys gotime:latest gotime-api keys create --partner partner-app --mode sandbox
     ```
     - Put the monitor key into `GOTIME_MONITOR_KEY` in `/etc/gotime/gotime.env`.
-    - Send AEIVA's key over a secure channel (not e-mail in plain text).
+    - Send the partner's key over a secure channel (not e-mail in plain text).
     - Then delete both `new_key_*.txt` files.
 11. **Start:** `docker compose up -d`. The scheduler fetches the newest cycle of each forecast at once, then
     precomputes. Follow it with `docker compose logs -f scheduler`. `/v1/ready` turns 200 after the first

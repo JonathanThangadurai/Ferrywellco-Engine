@@ -3,8 +3,8 @@ info:
   title: GOTime API
   version: 0.1.0
   description: |
-    DRAFT. Request and response fields are a draft, to agree with AEIVA. Guidance fields (window,
-    intensity_hint, indoor_alternative, reasons) are also a draft, to agree with Tilman.
+    DRAFT. Request and response fields are a draft, to agree with the partner. Guidance fields (window,
+    intensity_hint, indoor_alternative, reasons) are also a draft, to agree with the health engine.
 
     GOTime gives wellness guidance on when and how to be active outside. It is not a health service.
     Answers come from a snapshot computed once per forecast cycle (see docs/api-design.md).
@@ -25,7 +25,7 @@ paths:
   /guidance:
     post:
       operationId: getGuidance
-      summary: Guidance for one activity at one place and date (draft, to agree with AEIVA)
+      summary: Guidance for one activity at one place and date (draft, to agree with the partner)
       requestBody:
         required: true
         content:
@@ -171,7 +171,7 @@ components:
       examples: ['07:00']
 
     GuidanceRequest:
-      description: Draft, to agree with AEIVA. Unknown fields are rejected (no personal fields accepted).
+      description: Draft, to agree with the partner. Unknown fields are rejected (no personal fields accepted).
       type: object
       additionalProperties: false
       required: [location, date, earliest_start, latest_start, activity_type, duration_min]
@@ -195,7 +195,7 @@ components:
         activity_type:
           type: string
           enum: [walk, run, cycle, outdoor_workout]
-          description: Draft list, to agree with AEIVA and Tilman.
+          description: Draft list, to agree with the partner and the health engine.
         duration_min: {type: integer, minimum: 10, maximum: 240}
         heat_adapted:
           type: string
@@ -216,7 +216,7 @@ components:
           hay_fever: 'yes'
 
     GuidanceResponse:
-      description: Draft, to agree with AEIVA. Guidance fields are a draft, to agree with Tilman.
+      description: Draft, to agree with the partner. Guidance fields are a draft, to agree with the health engine.
       type: object
       additionalProperties: false
       required: [mode, request_id, snapshot_id, location, date, window, intensity_hint, indoor_alternative, reasons, data]
@@ -234,7 +234,7 @@ components:
           type: object
           additionalProperties: false
           required: [status]
-          description: Draft, to agree with Tilman. Codes are placeholders. `code` is present only when status = given (status = none when no window was found).
+          description: Draft, to agree with the health engine. Codes are placeholders. `code` is present only when status = given (status = none when no window was found).
           properties:
             status: {type: string, enum: [given, none]}
             code: {type: string, examples: [as_planned, go_easier, light_only]}
@@ -266,7 +266,7 @@ components:
       type: object
       additionalProperties: false
       required: [status]
-      description: Draft, to agree with Tilman. start, end and latest_start are present only when status = found.
+      description: Draft, to agree with the health engine. start, end and latest_start are present only when status = found.
       properties:
         status: {type: string, enum: [found, none]}
         start: {type: string, format: date-time}
@@ -280,7 +280,7 @@ components:
       type: object
       additionalProperties: false
       required: [code, params, source]
-      description: Draft, to agree with Tilman. Sandbox reasons are prefixed `sandbox_`.
+      description: Draft, to agree with the health engine. Sandbox reasons are prefixed `sandbox_`.
       properties:
         code: {type: string, examples: [heat_high, pm25_elevated, sandbox_example, pollen_not_assessed]}
         params:

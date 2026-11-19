@@ -1,4 +1,4 @@
-"""Request model for POST /v1/guidance (docs/openapi.yaml; draft, to agree with AEIVA).
+"""Request model for POST /v1/guidance (docs/openapi.yaml; draft, to agree with the partner).
 
 Strict: unknown fields are rejected, so no personal fields can come in. Coordinates are rounded to 2
 decimals (~1 km) inside validation, so nothing after this point ever sees the raw point.

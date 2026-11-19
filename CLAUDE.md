@@ -2,7 +2,7 @@
 
 GOTime turns weather and air quality forecasts into wellness guidance for partner apps (B2B API). This repo is the
 **data layer** (left side of `docs/architecture/gotime-data-architecture-v1.drawio`): data in, storage, bias correction, verification, data
-interface. Jon owns it. Tilman builds the health algorithm and reads data through the interface defined here.
+interface. The health engine reads data through the interface defined here.
 
 ## Rules (always)
 
@@ -10,15 +10,17 @@ interface. Jon owns it. Tilman builds the health algorithm and reads data throug
   docstrings say what a function does and why.
 - Wellness, not health: never write "safe", "clean" or "healthy" in anything user-facing.
 - Started from scratch. Never read, copy or imitate code from the old `gotime-engine` repo. Only `climatology/` (data) was copied.
-- Python only. Work in stages and **STOP for Jon's review after each stage**.
+- Python only. Work in stages and **STOP for review after each stage**.
 - Git: commit as `Jonathan Thangadurai <315550690+JonathanThangadurai@users.noreply.github.com>` (set in repo config).
   No co-author lines, no tool attribution. **Never push to main.** Since D3: work on a feature branch, push the
-  branch, open a PR with `gh pr create`, wait for green CI, report the link; Jon merges.
+  branch, open a PR with `gh pr create`, wait for green CI, report the link; merging is done by hand, not by the agent.
 - Keys: read only from the environment; if unset, parse `~/.config/gotime/keys.env` (`gotime_data/keys.py`).
   ERA5: `cdsapi.Client(url=CDS_URL, key=COPERNICUS_KEY)`; CAMS: `cdsapi.Client(url=ADS_URL, key=COPERNICUS_KEY)`. Never print, log, echo, cat or
-  commit a key; report presence only ("KNMI_API_KEY set: yes/no"). On 401/403, stop and tell Jon whether it is the key or a
+  commit a key; report presence only ("KNMI_API_KEY set: yes/no"). On 401/403, stop and report whether it is the key or a
   dataset licence that still needs accepting.
 - Memory: never load a full global or European file into memory; crop to city boxes and our variables as early as possible.
+- No names of people, roles or partner companies in code, docs, commit messages, PR titles/bodies or issues.
+  Refer to components instead ("health engine", "data pipeline", "wind/route service", "partner", "partner app").
 - Missing values are null plus `status = missing`, never 0. Data age counts from the forecast issue time.
 - Store UTC; convert with the IANA zone per instant. Keep raw values; compute averages on read. Pollen per type, never summed.
 
@@ -60,13 +62,13 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 - [x] Stage A: facts and design (skeleton, data-sources, pipeline design, open questions). Approved 2026-11-17.
 - [x] Stage B: access check and size test. Approved 2026-11-17. Stages A+B pushed to origin/main on 2026-11-17.
 - [x] Stage C: `gotime_data/` package (sources, store, schema, read, cli), tests, README. Reviewed 2026-11-18; pushed.
-  `docs/data-interface.md` stays "draft, pending Tilman's review" until Tilman confirms.
+  `docs/data-interface.md` stays "draft, pending health-engine review" until confirmed.
 - [x] Stage D1: API design (`docs/api-design.md`, `docs/engine-interface.md`, `docs/openapi.yaml`).
-  Guidance science is Tilman's; the API only provides the plug-in point and a SandboxEngine.
+  Guidance science belongs to the health engine; the API only provides the plug-in point and a SandboxEngine.
 - [x] Stage D2: `gotime_api/`, `gotime_engine/`, contract tests, load test. Approved and pushed to main 2026-11-19.
   Decisions: freshness ECMWF 16/30 h, CAMS EU 36/60 h, CAMS global 24/48 h (review after two weeks of logs);
   pollen_not_assessed (degraded only with hay_fever=yes); radius Amsterdam 15 km, Chennai 20 km; one mode per key.
-- [ ] Stage D3: Docker/compose/Caddy, `gotime_ops/` (scheduler, heartbeats, quality, monitor, backup, source
-  checks), CI + nightly/weekly source checks, golden/property/e2e tests, docs. Branch `d3-ops`, PR awaiting review.
+- [x] Stage D3: Docker/compose/Caddy, `gotime_ops/` (scheduler, heartbeats, quality, monitor, backup, source
+  checks), CI + nightly/weekly source checks, golden/property/e2e tests, docs. Merged (PR #1).
 - GitHub Actions secrets: KNMI_API_KEY, KNMI_EDR_API_KEY, COPERNICUS_KEY, OPENAQ_API_KEY; variables: ADS_URL, CDS_URL.
   Heartbeats: HC_PING_INGEST/PRECOMPUTE/MONITOR (env; never log or commit).
