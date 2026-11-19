@@ -8,7 +8,7 @@
 ## Why two methods
 
 The API answers each request in under 100 ms from a snapshot built once per forecast cycle (`api-design.md`).
-Some request options are continuous (earliest/latest start, duration), so we cannot precompute every answer.
+Some request options are continuous (earliest/latest start, duration), so not every answer can be precomputed.
 The engine therefore has two methods:
 
 1. `assess` (slow is fine, runs once per cycle in the precompute job): judges every hour of one local date for
@@ -16,7 +16,7 @@ The engine therefore has two methods:
 2. `choose` (must be fast, runs per request in the API): picks the window from the ready assessment and the
    window options.
 
-If you prefer a different split, tell us; only the boundary matters to the API.
+A different split is possible; only the boundary matters to the API.
 
 ## Protocol
 
@@ -118,12 +118,12 @@ not.
 - `choose` picks the earliest start, in 15-minute steps, with the lowest level, where every hour the
   activity touches has data.
 
-It exists so partners can integrate and we can test the API end to end. It is not a first version of the
+It exists so partners can integrate and the API can be tested end to end. It is not a first version of the
 science.
 
 ## Open questions: health engine
 
-1. Does the assess/choose split work for you? What should `Assessment` hold per hour?
+1. Does the assess/choose split fit the health engine? What should `Assessment` hold per hour?
 2. Which profile options change the result (activity type, heat_adapted, hay_fever, others)?
-3. Intensity hint and reason codes: your list.
-4. Do you need observations too (e.g. the last measured hours) as input, or forecasts only?
+3. Intensity hint and reason codes: which list?
+4. Does the health engine need observations too (e.g. the last measured hours) as input, or forecasts only?

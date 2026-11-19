@@ -190,4 +190,4 @@ never echo input values.
 3. Radius per location: Amsterdam 15 km, Chennai 20 km.
 4. One mode per API key (sandbox or live), enforced at authentication.
 
-Open questions on the health engine and partner integration are in `open-questions.md`.
+Open questions: health engine (`engine-interface.md`) and partner integration (`partner-guide.md`).

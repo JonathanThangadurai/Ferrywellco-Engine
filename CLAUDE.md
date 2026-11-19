@@ -19,6 +19,8 @@ interface. The health engine reads data through the interface defined here.
   commit a key; report presence only ("KNMI_API_KEY set: yes/no"). On 401/403, stop and report whether it is the key or a
   dataset licence that still needs accepting.
 - Memory: never load a full global or European file into memory; crop to city boxes and our variables as early as possible.
+- No names of people, roles or partner companies in code, docs, commit messages, PR titles/bodies or issues.
+  Refer to components instead ("health engine", "data pipeline", "wind/route service", "partner", "partner app").
 - Missing values are null plus `status = missing`, never 0. Data age counts from the forecast issue time.
 - Store UTC; convert with the IANA zone per instant. Keep raw values; compute averages on read. Pollen per type, never summed.
 
@@ -66,7 +68,7 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 - [x] Stage D2: `gotime_api/`, `gotime_engine/`, contract tests, load test. Approved and pushed to main 2026-11-19.
   Decisions: freshness ECMWF 16/30 h, CAMS EU 36/60 h, CAMS global 24/48 h (review after two weeks of logs);
   pollen_not_assessed (degraded only with hay_fever=yes); radius Amsterdam 15 km, Chennai 20 km; one mode per key.
-- [ ] Stage D3: Docker/compose/Caddy, `gotime_ops/` (scheduler, heartbeats, quality, monitor, backup, source
-  checks), CI + nightly/weekly source checks, golden/property/e2e tests, docs. Branch `d3-ops`, PR awaiting review.
+- [x] Stage D3: Docker/compose/Caddy, `gotime_ops/` (scheduler, heartbeats, quality, monitor, backup, source
+  checks), CI + nightly/weekly source checks, golden/property/e2e tests, docs. Merged (PR #1).
 - GitHub Actions secrets: KNMI_API_KEY, KNMI_EDR_API_KEY, COPERNICUS_KEY, OPENAQ_API_KEY; variables: ADS_URL, CDS_URL.
   Heartbeats: HC_PING_INGEST/PRECOMPUTE/MONITOR (env; never log or commit).

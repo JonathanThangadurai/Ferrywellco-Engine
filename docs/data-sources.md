@@ -87,7 +87,7 @@ humidity, wind and pollution). The chosen cell and the method are written to the
   ADS request is needed per run.
 - **Chennai CAMS caveat**: at 0.4° the nearest land cell is 32 km west of the centre, so it represents the
   inland west of the city, not the coast. Decided after stage C: the land cell stays the default, and the coastal
-  cell (13.2, 80.4) is stored too as `grid:cams_global:chennai:coastal`, so the health engine can choose (`open-questions.md` 18).
+  cell (13.2, 80.4) is stored too as `grid:cams_global:chennai:coastal`, so the health engine can choose (open question: health engine).
 
 ## 2. CAMS European air quality forecast (Amsterdam, incl. pollen)
 
