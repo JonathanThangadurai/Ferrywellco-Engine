@@ -192,11 +192,33 @@ def create_app(
     return app
 
 
+def add_local_docs(app: FastAPI) -> None:
+    """Swagger UI at /docs on top of docs/openapi.yaml, for trying the API on a laptop (GOTIME_ENV=local).
+
+    Off everywhere else: production serves only /v1/* (and Caddy only proxies /v1/*).
+    """
+    from fastapi.openapi.docs import get_swagger_ui_html
+    from fastapi.responses import HTMLResponse, PlainTextResponse
+
+    from gotime_data.config import REPO_ROOT
+
+    spec = (REPO_ROOT / "docs" / "openapi.yaml").read_text()
+
+    @app.get("/openapi.yaml", include_in_schema=False)
+    def openapi_yaml() -> PlainTextResponse:
+        return PlainTextResponse(spec, media_type="application/yaml")
+
+    @app.get("/docs", include_in_schema=False)
+    def docs() -> HTMLResponse:
+        return get_swagger_ui_html(openapi_url="/openapi.yaml", title="GOTime API (local)")
+
+
 def serve_app() -> FastAPI:
     """Factory for uvicorn (`gotime-api serve`): JSON logs in every worker process, then the app.
 
     GOTIME_TEST_NOW (ISO time) fixes the clock for end-to-end tests against a fixed snapshot. It is refused
     unless GOTIME_ENV=test, so it can never be switched on by accident in production.
+    GOTIME_ENV=local adds the Swagger UI at /docs (add_local_docs).
     """
     setup_logging()
     fixed = os.environ.get("GOTIME_TEST_NOW")
@@ -206,4 +228,7 @@ def serve_app() -> FastAPI:
         now = datetime.fromisoformat(fixed)
         log.warning("TEST MODE: the clock is fixed at %s", now.isoformat())
         return create_app(clock=lambda: now)
-    return create_app()
+    app = create_app()
+    if os.environ.get("GOTIME_ENV") == "local":
+        add_local_docs(app)
+    return app

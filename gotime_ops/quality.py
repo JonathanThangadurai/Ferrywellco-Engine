@@ -69,18 +69,26 @@ def check_cycle(source: str, run: datetime) -> list[str]:
 
 
 def missing_cycles(source: str, now: datetime, days: int = 1) -> list[str]:
-    """Runs from the last `days` whose retry deadline has passed but are not complete in the cycles table."""
+    """Runs from the last `days` whose retry deadline has passed but are not complete in the cycles table.
+
+    Runs before the first complete cycle of the source are not counted: a fresh install starts with the
+    newest cycle, so the ones before it were never expected (otherwise every first start would alarm).
+    """
     fc = next(f for f in FORECASTS if f.source == source)
     cycles = read_cycles()
     complete = cycles[(cycles["source"] == source) & cycles["complete"].astype(bool)]
     done = set(pd.to_datetime(complete["issue_time_utc"], utc=True))
+    if not done:
+        return []  # nothing stored yet; check_cycle reports the cycle that is not ingested
+    first = min(done)
     day0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
     missing = []
     for d in range(days + 1):
         for hour, delay in fc.delay.items():
             run = day0 - timedelta(days=d) + timedelta(hours=hour)
             deadline = run + delay + MARGIN + fc.window
-            if run >= now - timedelta(days=days) and deadline <= now and pd.Timestamp(run) not in done:
+            expected = run >= now - timedelta(days=days) and run >= first and deadline <= now
+            if expected and pd.Timestamp(run) not in done:
                 missing.append(f"cycle {run:%Y-%m-%d %H} UTC missing")
     return sorted(missing)
 

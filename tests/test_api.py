@@ -414,3 +414,19 @@ def test_inconsistent_engine_window_is_an_engine_error(api, monkeypatch):
     monkeypatch.setattr(SandboxEngine, "choose", broken)
     r = api.guidance()
     assert r.status_code == 500 and r.json()["code"] == "engine-error"
+
+
+def test_local_docs_only_when_added():
+    """Swagger UI and the spec are served only by add_local_docs (GOTIME_ENV=local), never by default."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from gotime_api.app import add_local_docs
+
+    plain = TestClient(FastAPI(docs_url=None, redoc_url=None, openapi_url=None))
+    assert plain.get("/docs").status_code == 404
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    add_local_docs(app)
+    local = TestClient(app)
+    assert "swagger-ui" in local.get("/docs").text
+    assert local.get("/openapi.yaml").text.startswith("openapi: 3.1.0")

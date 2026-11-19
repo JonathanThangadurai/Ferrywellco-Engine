@@ -65,6 +65,57 @@ ADS/CDS (CAMS, ERA5) allow only a few queued requests per dataset; the pipeline 
 OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hourly` unless
 `include_internal=True`, never shown to partners, and its data is never committed here.
 
+## Run locally
+
+The whole chain on a Mac, without Docker or a server. Source keys come from the environment or
+`~/.config/gotime/keys.env`.
+
+```
+scripts/run_local.sh               # fetch + ingest all sources, quality check, precompute, API on :8000
+scripts/run_local.sh --serve-only  # later: skip fetching, start the API on the data you already have
+```
+
+- **Data folder:** everything stays in `~/gotime-data-local` (`data/`, `api_keys.json`), which is kept between
+  runs. Use `GOTIME_LOCAL_DIR` to choose another folder.
+- **Fetch time:** the first fetch takes a few minutes, mostly ECMWF and the CAMS queue.
+- **ERA5:** left out, because its queue can take hours and the API does not use it.
+- **When a source fails:** the script warns and carries on. A forecast that fails its quality check is shown as
+  `degraded`.
+- **Test key:** the first run creates a sandbox key and writes it to `~/gotime-data-local/sandbox_key.txt`
+  (mode 600). It is never printed.
+- **Swagger UI:** only with `GOTIME_ENV=local`, which the script sets. Production serves `/v1/*` only.
+
+What to try (in a second terminal):
+
+```
+KEY="$(cat ~/gotime-data-local/sandbox_key.txt)"   # into a variable, not onto the screen
+TODAY=$(date +%F)
+H=(-H "Authorization: Bearer $KEY" -H "Content-Type: application/json")
+
+curl -s localhost:8000/v1/ready
+curl -s "${H[@]}" localhost:8000/v1/coverage
+# Amsterdam
+curl -s "${H[@]}" localhost:8000/v1/guidance -d '{"location":{"lat":52.37,"lon":4.90},"date":"'$TODAY'","earliest_start":"07:00","latest_start":"21:00","activity_type":"run","duration_min":45,"hay_fever":"yes"}'
+# Chennai
+curl -s "${H[@]}" localhost:8000/v1/guidance -d '{"location":{"lat":13.08,"lon":80.27},"date":"'$TODAY'","earliest_start":"06:00","latest_start":"20:00","activity_type":"walk","duration_min":30}'
+# not covered (Berlin): 422 not-covered
+curl -s "${H[@]}" localhost:8000/v1/guidance -d '{"location":{"lat":52.52,"lon":13.40},"date":"'$TODAY'","earliest_start":"07:00","latest_start":"21:00","activity_type":"run","duration_min":45}'
+# no window fits (60 min starting 23:30 runs past the end of the day): 200 with window.status = none
+curl -s "${H[@]}" localhost:8000/v1/guidance -d '{"location":{"lat":52.37,"lon":4.90},"date":"'$TODAY'","earliest_start":"23:30","latest_start":"23:30","activity_type":"run","duration_min":60}'
+```
+
+1. Open http://localhost:8000/docs. Click **Authorize**, paste the key, then use **Try it out** on `/guidance`.
+2. Check that `/v1/ready` returns `"status": "ready"`.
+3. Call `/v1/guidance` for each case above:
+   - **Amsterdam** and **Chennai:** 200 with a `window`, `data.sources` and `attribution`.
+   - **Not covered:** 422 `not-covered`.
+   - **No window fits:** 200 with `window.status` `none`.
+4. **Postman:**
+   - Import `docs/postman/gotime.postman_collection.json` and `docs/postman/gotime.postman_environment.json`.
+   - In the environment, set `baseUrl` to `http://localhost:8000` (no `/v1`) and `apiKey` to the contents of
+     `sandbox_key.txt` (as the current value only, so it is not synced).
+   - Run the **Sandbox** folder. The "Test environment only" folder needs the fixed CI setup (`docs/testing.md`).
+
 ## Docs
 
 - `docs/data-sources.md`: every source, verified live: access, licence, units, time conventions, pitfalls.
