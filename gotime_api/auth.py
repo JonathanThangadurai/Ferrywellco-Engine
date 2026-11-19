@@ -16,6 +16,8 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from gotime_engine.protocol import MODES
+
 from .problems import Problem
 
 PREFIX = "gt"
@@ -54,7 +56,12 @@ def write_keys(path: Path, keys: dict[str, KeyRecord]) -> None:
 
 
 def create_key(path: Path, partner: str, mode: str, rate_per_minute: int | None = None) -> tuple[str, str]:
-    """Add a key. Returns (key_id, full key). The full key is not stored anywhere by this function."""
+    """Add a key. Returns (key_id, full key). The full key is not stored anywhere by this function.
+
+    Each key has exactly one mode (sandbox or live); requests with it are always served in that mode.
+    """
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}")
     keys = read_keys(path)
     key_id = secrets.token_hex(4)
     while key_id in keys:
@@ -111,5 +118,7 @@ class KeyStore:
         record = self.keys.get(parts[1])
         expected = record.sha256 if record else _hash("not-a-key")
         if not hmac.compare_digest(_hash(parts[2]), expected) or record is None or record.revoked:
+            raise unauthorized
+        if record.mode not in MODES:  # a hand-edited keys file must not open another mode
             raise unauthorized
         return record

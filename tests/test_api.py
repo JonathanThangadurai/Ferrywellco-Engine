@@ -104,7 +104,8 @@ def test_sandbox_mode_always_flagged(api, activity, day):
     for loc in ({"lat": 52.37, "lon": 4.9}, {"lat": 13.08, "lon": 80.27}):
         body = api.guidance(location=loc, date=day, activity_type=activity, heat_adapted="no").json()
         assert body["mode"] == "sandbox"
-        assert all(x["code"].startswith("sandbox_") for x in body["reasons"])
+        engine_reasons = [x for x in body["reasons"] if x["source"] != "data_layer"]
+        assert engine_reasons and all(x["code"].startswith("sandbox_") for x in engine_reasons)
 
 
 def test_window_fits_duration_and_options(api):
@@ -130,6 +131,10 @@ def test_snapping_radius_and_rounding(api):
     assert (
         api.guidance(location={"lat": 52.30, "lon": 4.80}).json()["location"]["alias"] == "amsterdam"
     )  # ~13 km
+    south = api.guidance(location={"lat": 12.95, "lon": 80.20})  # 16.7 km: inside Chennai's 20 km
+    assert south.json()["location"]["alias"] == "chennai"
+    tambaram = api.guidance(location={"lat": 12.92, "lon": 80.12})  # 22 km
+    assert tambaram.json()["code"] == "not-covered"
     r = api.guidance(location={"lat": 52.09, "lon": 5.12})  # Utrecht, ~35 km
     assert r.status_code == 422 and r.json()["code"] == "not-covered"
     r = api.guidance(location={"lat": 48.86, "lon": 2.35})  # Paris
@@ -207,6 +212,33 @@ def test_auth(api):
     r = api.guidance()
     assert r.status_code == 401 and r.json()["code"] == "unauthorized"
     assert api.client.get("/v1/coverage", headers=api.headers).status_code == 401
+
+
+def test_one_mode_per_key(api):
+    with pytest.raises(ValueError):
+        create_key(api.settings.keys_file, "x", "admin")
+    _, live = create_key(api.settings.keys_file, "x", "live")
+    r = api.guidance(headers={"Authorization": f"Bearer {live}"})  # no live snapshot is served yet
+    assert r.status_code == 503 and r.json()["code"] == "snapshot-unavailable"
+    data = json.loads(api.settings.keys_file.read_text())
+    for k in data["keys"]:
+        k["mode"] = "admin"  # a hand-edited file must not open anything
+    api.settings.keys_file.write_text(json.dumps(data))
+    os.utime(api.settings.keys_file, (1, 1))
+    assert api.guidance().status_code == 401
+
+
+def test_pollen_not_assessed(api):
+    chennai = {"lat": 13.08, "lon": 80.27}  # no pollen forecast for Chennai
+    body = api.guidance(location=chennai, hay_fever="no").json()
+    assert body["data"]["status"] == "ok"
+    assert body["reasons"][0]["code"] == "pollen_not_assessed"
+    body = api.guidance(location=chennai, hay_fever="yes").json()
+    assert body["data"]["status"] == "degraded"
+    assert body["reasons"][0]["code"] == "pollen_not_assessed"
+    body = api.guidance(hay_fever="yes").json()  # Amsterdam has pollen
+    assert body["data"]["status"] == "ok"
+    assert all(x["code"] != "pollen_not_assessed" for x in body["reasons"])
 
 
 def test_keys_file_holds_hashes_only(api):

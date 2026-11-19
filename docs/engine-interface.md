@@ -24,18 +24,26 @@ Code: `gotime_engine/protocol.py`. The sandbox stand-in is `gotime_engine/sandbo
 
 ```python
 class GuidanceEngine(Protocol):
-    name: str                                # e.g. "sandbox", "gotime-v1"
-    version: str                             # change it whenever results can change; part of the snapshot id
+    name: str  # e.g. "sandbox", "gotime-v1"
+    version: str  # change it whenever results can change; part of the snapshot id
     mode: Literal["live", "sandbox"]
 
-    def required_variables(self) -> list[str]: ...   # without them: no answer (503 data-unavailable)
-    def optional_variables(self) -> list[str]: ...   # used when present (e.g. pollen)
-    def profiles(self) -> list[Profile]: ...         # every discrete option combination to precompute
+    def required_variables(self) -> list[str]: ...  # without them: no answer (503 data-unavailable)
+    def optional_variables(self) -> list[str]: ...  # used when present (e.g. pollen)
+    def profiles(self) -> list[Profile]: ...  # every discrete option combination to precompute
 
-    def assess(self, hourly: pd.DataFrame, location: LocationInfo, local_date: date,
-               profile: Profile, now_utc: datetime) -> Assessment: ...   # once per cycle; JSON-serialisable
+    def assess(
+        self,
+        hourly: pd.DataFrame,
+        location: LocationInfo,
+        local_date: date,
+        profile: Profile,
+        now_utc: datetime,
+    ) -> Assessment: ...  # once per cycle; JSON-serialisable
 
-    def choose(self, assessment: Assessment, options: WindowOptions) -> GuidanceResult: ...  # per request, < 5 ms
+    def choose(
+        self, assessment: Assessment, options: WindowOptions
+    ) -> GuidanceResult: ...  # per request, < 5 ms
 ```
 
 The API checks that the engine version that made a snapshot equals the running code's version. If they

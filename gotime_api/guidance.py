@@ -12,12 +12,20 @@ from zoneinfo import ZoneInfo
 from gotime_engine import WindowOptions
 from gotime_engine.snapshot import assessment_key
 
-from .freshness import data_status, forecast_until
+from .freshness import ORDER, data_status, forecast_until, pollen_available
 from .locations import allowed_dates, local_instant, snap
 from .models import GuidanceRequest
 from .problems import Problem
 from .settings import Settings
 from .snapshots import Loaded
+
+# Added by the API (not the engine) when the location has no usable pollen data (decided after D2).
+POLLEN_NOT_ASSESSED = {
+    "code": "pollen_not_assessed",
+    "params": {},
+    "source": "data_layer",
+    "text": "No pollen forecast is available for this place, so pollen was not taken into account.",
+}
 
 
 def etag(loaded: Loaded, req: GuidanceRequest) -> str:
@@ -78,6 +86,10 @@ def handle(
         )
     hint = {"status": "given", "code": result.intensity_hint} if result.intensity_hint else {"status": "none"}
     reasons = []
+    if not pollen_available(loc, sources):
+        reasons.append(dict(POLLEN_NOT_ASSESSED))
+        if req.hay_fever == "yes":
+            status = max(status, "degraded", key=ORDER.get)
     for r in result.reasons:
         item = {"code": r.code, "params": r.params, "source": r.source}
         if r.text:

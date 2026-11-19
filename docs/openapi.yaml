@@ -282,12 +282,12 @@ components:
       required: [code, params, source]
       description: Draft, to agree with Tilman. Sandbox reasons are prefixed `sandbox_`.
       properties:
-        code: {type: string, examples: [heat_high, pm25_elevated, sandbox_example]}
+        code: {type: string, examples: [heat_high, pm25_elevated, sandbox_example, pollen_not_assessed]}
         params:
           type: object
           description: Numbers behind the reason; keys carry units (t2m_c, pm25_ugm3).
           additionalProperties: {type: number}
-        source: {type: string, examples: [ecmwf_ifs, cams_eu, cams_global]}
+        source: {type: string, description: 'Data source, `sandbox` for sandbox examples, `data_layer` for data notes such as pollen_not_assessed.', examples: [ecmwf_ifs, cams_eu, cams_global, data_layer]}
         text: {type: string, description: Optional English text; translate by code.}
 
     DataStatus:
@@ -298,7 +298,7 @@ components:
         status:
           type: string
           enum: [ok, degraded]
-          description: Worst status of the required sources. Unavailable data gives 503 data-unavailable instead.
+          description: Worst status of the required sources (unavailable data gives 503 data-unavailable instead). Without a pollen forecast the reason pollen_not_assessed is added, and the status is degraded only when hay_fever = yes.
         sources:
           type: array
           items:

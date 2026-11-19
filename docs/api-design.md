@@ -58,7 +58,8 @@ request. Both steps are Tilman's code (`engine-interface.md`).
   `ecmwf0p1_n13.10_e80.20`.
 - **Aliases:** cities are aliases (`amsterdam`, `chennai`). Air quality cells per location come from the
   sites table (CAMS EU, or CAMS global with land cell by default).
-- **Configuration:** `config/locations.yaml` gains `radius_km` (default 15) and keeps `tz`.
+- **Configuration:** `radius_km` per location in `config/locations.yaml` (decided after D2: Amsterdam 15 km,
+  Chennai 20 km; default 15) and `tz`.
 - **Snapping:**
   1. Round lat and lon to 2 decimals (privacy, section 7).
   2. Compute the great-circle distance to the reference point (cell centre) of each supported location.
@@ -70,23 +71,25 @@ request. Both steps are Tilman's code (`engine-interface.md`).
   - `date`, `earliest_start` and `latest_start` are local to the location.
   - The response times are RFC 3339 with the local offset for that instant (daylight-saving days have 23 or
     25 hours).
-- **Open point:** 15 km around one cell does not cover all of Chennai (e.g. Tambaram is about 21 km away).
-  It can be fixed with more cells or a larger radius per location.
+- Chennai's 20 km still leaves out its southern edge (Tambaram is about 22 km away); more cells would fix that.
 
 ## 4. Data freshness
 
 Age = request time − forecast `issue_time`, never the download time. It is computed per request from the
-manifest, because the age grows while the snapshot is served. Thresholds are placeholders in config
-(`config/serving.yaml`) until we agree them:
+manifest, because the age grows while the snapshot is served. Thresholds are in `config/serving.yaml`.
+**Starting values (decided after D2); review after two weeks of logs:**
 
 | source | normal age (cycle + delay) | ok | degraded | unavailable |
 |---|---|---|---|---|
-| ecmwf_ifs (weather) | 8.5–15.5 h (4 runs/day) | ≤ 18 h | ≤ 36 h | > 36 h |
-| cams_eu (air, pollen) | ~10–34 h (1 run/day) | ≤ 36 h | ≤ 60 h | > 60 h |
-| cams_global (air) | ~12–24 h (2 runs/day) | ≤ 30 h | ≤ 54 h | > 54 h |
+| ecmwf_ifs (weather) | 8.5–15.5 h (4 runs/day) | ≤ 16 h | > 16 h | > 30 h |
+| cams_eu (air, pollen) | ~10–34 h (1 run/day) | ≤ 36 h | > 36 h | > 60 h |
+| cams_global (air) | ~12–24 h (2 runs/day) | ≤ 24 h | > 24 h | > 48 h |
 
 - The overall `data.status` is the worst status among the **required** sources (weather plus air quality).
-  Pollen is optional: if it is unavailable, the response says so in its source entry and drops to `degraded`.
+- Pollen (decided after D2): when the location has no usable pollen forecast (Chennai always; Amsterdam when
+  CAMS Europe pollen is missing or unavailable), the response gets the reason `pollen_not_assessed` (source
+  `data_layer`). The status becomes `degraded` only if the request has `hay_fever: yes`; otherwise it stays
+  `ok`.
 - `unavailable`: no guidance is given and the API returns **503 `data-unavailable`** with `Retry-After`.
   `degraded` still returns 200, with the status stated.
 - Horizon: a window must fit the whole activity inside the forecast. The latest start is cut back to
@@ -179,8 +182,11 @@ manifest, because the age grows while the snapshot is served. Thresholds are pla
 All errors are RFC 9457 `application/problem+json` with a stable `code` and the `request_id`. Error responses
 never echo input values.
 
-## 10. Open points for Jon
+## 10. Decided after D2
 
-1. Activity types for 0.1.0 (draft: `walk`, `run`, `cycle`, `outdoor_workout`) to agree with AEIVA and Tilman.
-2. Freshness thresholds (section 4) and whether missing pollen should give `degraded` or stay `ok`.
-3. Radius per location (Chennai coverage, section 3).
+1. Freshness starting values as in section 4, to review after two weeks of logs.
+2. Missing pollen: `degraded` only with `hay_fever: yes`, otherwise `ok` plus reason `pollen_not_assessed`.
+3. Radius per location: Amsterdam 15 km, Chennai 20 km.
+4. One mode per API key (sandbox or live), enforced at authentication.
+
+Questions for Tilman and AEIVA are in `open-questions.md`.

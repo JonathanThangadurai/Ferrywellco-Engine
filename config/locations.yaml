@@ -20,5 +20,5 @@ locations:
     lat: 13.08
     lon: 80.27
     tz: Asia/Kolkata
-    radius_km: 15
+    radius_km: 20
     bbox: [12.6, 13.6, 79.7, 80.8]

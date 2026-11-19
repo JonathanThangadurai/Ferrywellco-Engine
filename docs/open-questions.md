@@ -1,4 +1,9 @@
-# Open questions for Tilman (health algorithm side)
+# Open questions
+
+Grouped by who answers them: **Tilman** (guidance algorithm, sections 1 to 7) and **AEIVA** (partner API
+fields, section 8).
+
+## Questions for Tilman (algorithm side)
 
 The data layer stores hourly values in UTC in one table (see `data-pipeline-design.md`). Please answer inline
 so we can fix the interface (`docs/data-interface.md`, written in Stage C).
@@ -67,3 +72,29 @@ so we can fix the interface (`docs/data-interface.md`, written in Stage C).
     adjust the first forecast hours towards the latest observation (e.g. the current forecast error fading out
     over the next 6–12 hours). Would that be useful for the morning guidance, and which variables matter most?
 
+## 7. Engine interface (stage D, `engine-interface.md`) — Tilman
+
+21. **Two steps.** `assess` runs once per forecast cycle per location, local date and profile; `choose` picks
+    the window per request from the stored assessment (< 5 ms). Does that split work for you, and what should
+    an assessment hold per hour?
+22. **Profiles.** Which options change the result? Today all 36 combinations of activity type (4),
+    heat_adapted (3) and hay_fever (3) are precomputed.
+23. **Codes.** Your list of intensity-hint codes (placeholders: `as_planned`, `go_easier`, `light_only`) and
+    reason codes. Once agreed, codes are stable for partners.
+24. **Inputs.** Do you need observations as input, or the 24 h before the date (the newest forecast cycle only
+    starts at its issue time)?
+25. **Half-hour time zones.** In Chennai (UTC+5:30) a local day touches 25 UTC hours, the first and last half
+    outside the day. Acceptable, or should values be interpolated to local half hours?
+
+## Questions for AEIVA (partner API fields, `openapi.yaml`)
+
+## 8. Request and response fields (stage D)
+
+- **A1.** **Activity types:** `walk`, `run`, `cycle`, `outdoor_workout`. Which do you need?
+- **A2.** **hay_fever** and **heat_adapted** as `yes` / `no` / `unknown`. Does that match what your app knows?
+- **A3.** **No window:** when nothing fits, the answer is 200 with `window.status: none` (not an error). OK?
+- **A4.** **Dates and times:** today to today + 3; start times cannot cross midnight; the end of the range can be
+  cut back to where the forecast ends. OK?
+- **A5.** **Time format:** local times with offset (e.g. `2026-11-20T06:00:00+05:30`); forecast issue times in UTC.
+- **A6.** **Attribution:** data sources must be shown in a visible place (e.g. a data-sources screen). Where will
+  you show them?
