@@ -1,9 +1,12 @@
 """Data freshness per request: age = now - forecast issue time, never the download time.
 
-Per source: ok up to `ok` hours, degraded up to `degraded` hours, else unavailable (config/serving.yaml).
-Overall: unavailable when a required source is unavailable (the API then answers 503 data-unavailable);
-otherwise the worst status of the required sources, and at least degraded when an optional source
-is unavailable. The age is computed per request because it grows while a snapshot is served.
+Per source: ok up to `ok` hours, degraded up to `degraded` hours, else unavailable (config/serving.yaml;
+starting values, to review after two weeks of logs).
+Overall: unavailable when a required source is unavailable (the API then answers 503 data-unavailable),
+otherwise the worst status of the required sources.
+Pollen (decided after D2): when no pollen data is available for the location, the response carries the
+reason `pollen_not_assessed`; the status becomes degraded only if the request says hay_fever = yes.
+The age is computed per request because it grows while a snapshot is served.
 """
 
 from datetime import datetime
@@ -39,10 +42,16 @@ def data_status(location: dict, now_utc: datetime, settings: Settings) -> tuple[
     required = [e["status"] for e in entries if e["required"]]
     if not required or "unavailable" in required:
         return "unavailable", entries
-    overall = max(required, key=ORDER.get)
-    if any(e["status"] == "unavailable" for e in entries if not e["required"]):
-        overall = max(overall, "degraded", key=ORDER.get)
-    return overall, entries
+    return max(required, key=ORDER.get), entries
+
+
+def pollen_available(location: dict, entries: list[dict]) -> bool:
+    """True when a source with pollen variables is present for this location and not unavailable."""
+    status = {e["source"]: e["status"] for e in entries}
+    return any(
+        any(v.startswith("pollen_") for v in s["variables"]) and status.get(s["source"]) != "unavailable"
+        for s in location["sources"]
+    )
 
 
 def forecast_until(location: dict) -> datetime | None:

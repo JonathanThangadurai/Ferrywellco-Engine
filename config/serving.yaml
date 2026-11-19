@@ -6,10 +6,11 @@ modes: [sandbox]
 
 # Data age = request time - forecast issue time, in hours. Up to `ok`: ok; up to `degraded`: degraded;
 # older: unavailable (no guidance, 503 data-unavailable).
+# Starting values decided after D2; review after two weeks of logs.
 freshness_h:
-  ecmwf_ifs: {ok: 18, degraded: 36}
+  ecmwf_ifs: {ok: 16, degraded: 30}
   cams_eu: {ok: 36, degraded: 60}
-  cams_global: {ok: 30, degraded: 54}
+  cams_global: {ok: 24, degraded: 48}
   default: {ok: 24, degraded: 48}
 
 # Shown in every guidance response for the sources used.
