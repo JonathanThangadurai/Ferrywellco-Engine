@@ -58,16 +58,17 @@ def test_window_rules(case):
     if result.window_status == "none":
         assert result.window_start is None and result.intensity_hint is None
         return
-    start, end = result.window_start, result.window_end
-    assert end - start == timedelta(minutes=duration)
+    start, end, last = result.window_start, result.window_end, result.latest_start
+    assert start <= last and last + timedelta(minutes=duration) <= end  # the definition of the window
+    assert last + timedelta(minutes=duration) == end  # latest_start = end - duration
     assert earliest <= start <= latest
-    assert start <= result.latest_start <= latest
+    assert start <= last <= latest
     hours = local_day_hours(day, tz)
     assert hours[0] <= start and end <= hours[-1] + timedelta(hours=1)  # inside the hours of the local day
     ok = {h["start_utc"] for h in assessment["hours"] if h["status"] == "ok"}
     h = start.replace(minute=0, second=0, microsecond=0)
     while h < end:
-        assert h.isoformat() in ok, "the window touches an hour without data"
+        assert h.isoformat() in ok, "the period touches an hour without data"
         h += timedelta(hours=1)
 
 

@@ -29,7 +29,7 @@ STEP = timedelta(minutes=15)  # candidate start times are tried every 15 minutes
 
 class SandboxEngine:
     name = "sandbox"
-    version = "0.1.0"
+    version = "0.2.0"
     mode = "sandbox"
 
     def required_variables(self) -> list[str]:
@@ -105,7 +105,11 @@ class SandboxEngine:
         }
 
     def choose(self, assessment: Assessment, options: WindowOptions) -> GuidanceResult:
-        """Earliest start with the lowest level, where every hour the activity touches has data."""
+        """The earliest suitable period at the lowest level, where every hour it touches has data.
+
+        window_start..window_end is that period (at least the duration long); latest_start is
+        window_end - duration, the last start that still fits the activity inside it.
+        """
         hours = {datetime.fromisoformat(h["start_utc"]): h for h in assessment["hours"]}
         duration = timedelta(minutes=options.duration_min)
 
@@ -134,18 +138,18 @@ class SandboxEngine:
         j = i
         while j + 1 < len(starts) and levels[j + 1] is not None and levels[j + 1] <= best:
             j += 1
-        start = starts[i]
+        start, latest, end = starts[i], starts[j], starts[j] + duration
         reasons = {}
         h = start.replace(minute=0, second=0, microsecond=0)
-        while h < start + duration:
+        while h < end:
             for r in hours[h]["reasons"]:
                 reasons.setdefault(r["code"], Reason(**r))
             h += timedelta(hours=1)
         return GuidanceResult(
             window_status="found",
             window_start=start,
-            window_end=start + duration,
-            latest_start=starts[j],
+            window_end=end,
+            latest_start=latest,
             intensity_hint=HINTS[best],
             indoor_alternative="suggested" if best == 2 else "not_suggested",
             reasons=[example, *reasons.values()],

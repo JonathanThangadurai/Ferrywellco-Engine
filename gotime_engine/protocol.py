@@ -74,7 +74,10 @@ class Reason:
 class GuidanceResult:
     """What choose() returns. Every field: draft, to agree with the health engine.
 
-    window_status 'found' -> window_start, window_end and latest_start are set (aware datetimes).
+    window_status 'found' -> window_start, window_end and latest_start are set (aware datetimes):
+        window_start..window_end  the suitable period (at least duration long, inside the options)
+        latest_start              window_end - duration: the last start that fits the activity in the period
+        so window_start <= latest_start and latest_start + duration == window_end (the API checks this).
     window_status 'none'  -> they are None and intensity_hint is None.
     """
 
