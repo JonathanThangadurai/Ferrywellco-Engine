@@ -1,0 +1,373 @@
+openapi: 3.1.0
+info:
+  title: GOTime API
+  version: 0.1.0
+  description: |
+    DRAFT. Request and response fields are a draft, to agree with the partner. Guidance fields (window,
+    intensity_hint, indoor_alternative, reasons) are also a draft, to agree with the health engine.
+
+    GOTime gives wellness guidance on when and how to be active outside. It is not a health service.
+    Answers come from a snapshot computed once per forecast cycle (see docs/api-design.md).
+
+    Conventions:
+    - Units are in field names (`distance_km`, `duration_min`, `forecast_age_h`).
+    - Times are RFC 3339 with the location's local offset.
+    - Every optional outcome has an explicit status field; null never carries meaning.
+    - Errors are RFC 9457 problem+json with a stable `code`.
+    - `date`, `earliest_start` and `latest_start` are local to the resolved location.
+    - Coordinates are rounded to 2 decimals on arrival and never logged or stored.
+servers:
+  - url: /v1
+security:
+  - apiKey: []
+
+paths:
+  /guidance:
+    post:
+      operationId: getGuidance
+      summary: Guidance for one activity at one place and date (draft, to agree with the partner)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/GuidanceRequest'}
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: {type: string}
+      responses:
+        '200':
+          description: Guidance (window.status may be `none` when no window fits)
+          headers:
+            X-Request-ID: {$ref: '#/components/headers/RequestId'}
+            ETag: {$ref: '#/components/headers/ETag'}
+            Cache-Control: {$ref: '#/components/headers/CacheControl'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GuidanceResponse'}
+        '304': {description: Not modified (same snapshot and request)}
+        '400': {$ref: '#/components/responses/Problem'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '413': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/ProblemRetry'}
+        '500': {$ref: '#/components/responses/Problem'}
+        '503': {$ref: '#/components/responses/ProblemRetry'}
+
+  /coverage:
+    get:
+      operationId: getCoverage
+      summary: Supported locations, radius, time zone and available dates
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Coverage of the current snapshot
+          headers:
+            X-Request-ID: {$ref: '#/components/headers/RequestId'}
+            ETag: {$ref: '#/components/headers/ETag'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CoverageResponse'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/ProblemRetry'}
+        '503': {$ref: '#/components/responses/ProblemRetry'}
+
+  /health:
+    get:
+      operationId: getHealth
+      summary: Liveness; the process is up (no auth)
+      security: []
+      responses:
+        '200':
+          description: Process alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                additionalProperties: false
+                properties:
+                  status: {type: string, enum: [ok]}
+
+  /ready:
+    get:
+      operationId: getReady
+      summary: Readiness; a valid snapshot is loaded (no auth)
+      security: []
+      responses:
+        '200':
+          description: Ready to serve
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, snapshot_id, snapshot_age_s]
+                additionalProperties: false
+                properties:
+                  status: {type: string, enum: [ready]}
+                  snapshot_id: {type: string, examples: ['20261119T06Z-3fa9c2d1']}
+                  snapshot_age_s: {type: integer, minimum: 0}
+        '503': {$ref: '#/components/responses/ProblemRetry'}
+
+components:
+  securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      description: Per-partner API key `gt_<key_id>_<secret>`. Stored hashed on the server.
+
+  parameters:
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Optional client id for tracing (1-64 chars, letters, digits, `-` and `_`); otherwise generated.
+      schema: {type: string, pattern: '^[A-Za-z0-9_-]{1,64}$'}
+
+  headers:
+    RequestId:
+      description: Request id, echoed or generated
+      schema: {type: string}
+    ETag:
+      description: Weak ETag from snapshot id and normalised request
+      schema: {type: string}
+    CacheControl:
+      description: '`private, max-age=N`, N = seconds until the next expected snapshot (60-900)'
+      schema: {type: string}
+    RetryAfter:
+      description: Seconds to wait before retrying
+      schema: {type: integer, minimum: 1}
+
+  responses:
+    Problem:
+      description: Error (RFC 9457)
+      headers:
+        X-Request-ID: {$ref: '#/components/headers/RequestId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    ProblemRetry:
+      description: Error with Retry-After (RFC 9457)
+      headers:
+        X-Request-ID: {$ref: '#/components/headers/RequestId'}
+        Retry-After: {$ref: '#/components/headers/RetryAfter'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+
+  schemas:
+    LocalTime:
+      type: string
+      pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+      description: Local wall-clock time HH:MM at the resolved location
+      examples: ['07:00']
+
+    GuidanceRequest:
+      description: Draft, to agree with the partner. Unknown fields are rejected (no personal fields accepted).
+      type: object
+      additionalProperties: false
+      required: [location, date, earliest_start, latest_start, activity_type, duration_min]
+      properties:
+        location:
+          type: object
+          additionalProperties: false
+          required: [lat, lon]
+          description: Rounded to 2 decimals on arrival; never logged or stored.
+          properties:
+            lat: {type: number, minimum: -90, maximum: 90}
+            lon: {type: number, minimum: -180, maximum: 180}
+        date:
+          type: string
+          format: date
+          description: Local date at the location; today to today + 3.
+        earliest_start: {$ref: '#/components/schemas/LocalTime'}
+        latest_start:
+          $ref: '#/components/schemas/LocalTime'
+          description: Latest acceptable start; must be >= earliest_start on the same date (no midnight crossing in 0.1.0).
+        activity_type:
+          type: string
+          enum: [walk, run, cycle, outdoor_workout]
+          description: Draft list, to agree with the partner and the health engine.
+        duration_min: {type: integer, minimum: 10, maximum: 240}
+        heat_adapted:
+          type: string
+          enum: ['yes', 'no', unknown]
+          default: unknown
+        hay_fever:
+          type: string
+          enum: ['yes', 'no', unknown]
+          default: unknown
+      examples:
+        - location: {lat: 52.37, lon: 4.9}
+          date: '2026-11-20'
+          earliest_start: '07:00'
+          latest_start: '19:00'
+          activity_type: run
+          duration_min: 45
+          heat_adapted: unknown
+          hay_fever: 'yes'
+
+    GuidanceResponse:
+      description: Draft, to agree with the partner. Guidance fields are a draft, to agree with the health engine.
+      type: object
+      additionalProperties: false
+      required: [mode, request_id, snapshot_id, location, date, window, intensity_hint, indoor_alternative, reasons, data]
+      properties:
+        mode:
+          type: string
+          enum: [live, sandbox]
+          description: '`sandbox` = synthetic example output, not guidance.'
+        request_id: {type: string}
+        snapshot_id: {type: string}
+        location: {$ref: '#/components/schemas/ResolvedLocation'}
+        date: {type: string, format: date}
+        window: {$ref: '#/components/schemas/Window'}
+        intensity_hint:
+          type: object
+          additionalProperties: false
+          required: [code]
+          description: Draft, to agree with the health engine. Codes are placeholders.
+          properties:
+            code: {type: string, examples: [as_planned, go_easier, light_only]}
+        indoor_alternative:
+          type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status: {type: string, enum: [suggested, not_suggested]}
+        reasons:
+          type: array
+          items: {$ref: '#/components/schemas/Reason'}
+        data: {$ref: '#/components/schemas/DataStatus'}
+
+    ResolvedLocation:
+      type: object
+      additionalProperties: false
+      required: [id, alias, timezone, distance_km]
+      properties:
+        id: {type: string, examples: [ecmwf0p1_n52.40_e4.90]}
+        alias: {type: string, examples: [amsterdam]}
+        timezone: {type: string, examples: [Europe/Amsterdam]}
+        distance_km:
+          type: number
+          minimum: 0
+          description: From the rounded request point to the location's reference cell, 1 decimal.
+
+    Window:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: Draft, to agree with the health engine. start, end and latest_start are present only when status = found.
+      properties:
+        status: {type: string, enum: [found, none]}
+        start: {type: string, format: date-time}
+        end: {type: string, format: date-time}
+        latest_start:
+          type: string
+          format: date-time
+          description: Latest start that still gives the same intensity hint.
+
+    Reason:
+      type: object
+      additionalProperties: false
+      required: [code, params, source]
+      description: Draft, to agree with the health engine. Sandbox reasons are prefixed `sandbox_`.
+      properties:
+        code: {type: string, examples: [heat_high, pm25_elevated, sandbox_example]}
+        params:
+          type: object
+          description: Numbers behind the reason; keys carry units (t2m_c, pm25_ugm3).
+          additionalProperties: {type: number}
+        source: {type: string, examples: [ecmwf_ifs, cams_eu, cams_global]}
+        text: {type: string, description: Optional English text; translate by code.}
+
+    DataStatus:
+      type: object
+      additionalProperties: false
+      required: [status, sources, attribution]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: Worst status of the required sources. Unavailable data gives 503 data-unavailable instead.
+        sources:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [source, status, issue_time, forecast_age_h, required]
+            properties:
+              source: {type: string, examples: [ecmwf_ifs]}
+              required: {type: boolean}
+              status: {type: string, enum: [ok, degraded, unavailable]}
+              issue_time: {type: string, format: date-time, description: Forecast base time (UTC).}
+              forecast_age_h: {type: number, minimum: 0, description: Request time minus issue time, 1 decimal.}
+        attribution:
+          type: array
+          items: {type: string}
+          examples:
+            - ['Contains modified ECMWF open data (CC BY 4.0)', 'Generated using Copernicus Atmosphere Monitoring Service information (CC BY 4.0)']
+
+    CoverageResponse:
+      type: object
+      additionalProperties: false
+      required: [snapshot_id, locations]
+      properties:
+        snapshot_id: {type: string}
+        locations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, aliases, name, lat, lon, radius_km, timezone, dates_available, forecast_until, data_status]
+            properties:
+              id: {type: string}
+              aliases: {type: array, items: {type: string}}
+              name: {type: string}
+              lat: {type: number, description: Reference cell centre}
+              lon: {type: number, description: Reference cell centre}
+              radius_km: {type: number}
+              timezone: {type: string}
+              dates_available: {type: array, items: {type: string, format: date}}
+              forecast_until: {type: string, format: date-time}
+              data_status: {type: string, enum: [ok, degraded, unavailable]}
+
+    Problem:
+      description: RFC 9457 problem details with a stable code. Never echoes input values.
+      type: object
+      required: [type, title, status, code, request_id]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          examples: ['urn:gotime:problem:not-covered']
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        code:
+          type: string
+          enum:
+            - invalid-request           # 400/422: malformed or failed validation
+            - not-covered               # 422: no supported location within radius
+            - date-out-of-range         # 422: date not within today..today+3 (local)
+            - beyond-forecast-horizon   # 422: window ends after the forecast
+            - unauthorized              # 401: missing or invalid key
+            - payload-too-large         # 413
+            - rate-limited              # 429
+            - engine-error              # 500
+            - internal-error            # 500
+            - snapshot-unavailable      # 503: no snapshot loaded
+            - data-unavailable          # 503: required source too old
+        request_id: {type: string}
+        errors:
+          type: array
+          description: For invalid-request only; field paths and reasons, no input values.
+          items:
+            type: object
+            required: [field, reason]
+            properties:
+              field: {type: string, examples: [duration_min]}
+              reason: {type: string, examples: [must be between 10 and 240]}

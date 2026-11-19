@@ -60,3 +60,5 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 - [x] Stage B: access check and size test. Approved 2026-11-17. Stages A+B pushed to origin/main on 2026-11-17.
 - [x] Stage C: `gotime_data/` package (sources, store, schema, read, cli), tests, README. Reviewed 2026-11-18; pushed.
   `docs/data-interface.md` stays "draft, pending health-engine review" until confirmed.
+- [ ] Stage D1: API design (`docs/api-design.md`, `docs/engine-interface.md`, `docs/openapi.yaml`). Awaiting review.
+  Guidance science belongs to the health engine; the API only provides the plug-in point and a SandboxEngine.
