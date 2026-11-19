@@ -55,10 +55,10 @@ Response (sandbox, shortened):
 {
   "mode": "sandbox",
   "request_id": "6c1f...",
-  "snapshot_id": "20261119T00Z-2829b8d8",
+  "snapshot_id": "20261119T00Z-a047de65",
   "location": {"id": "ecmwf0p1_n52.40_e4.90", "alias": "amsterdam", "timezone": "Europe/Amsterdam", "distance_km": 3.3},
   "date": "2026-11-19",
-  "window": {"status": "found", "start": "2026-11-19T07:00:00+01:00", "end": "2026-11-19T07:45:00+01:00",
+  "window": {"status": "found", "start": "2026-11-19T07:00:00+01:00", "end": "2026-11-19T11:00:00+01:00",
              "latest_start": "2026-11-19T10:15:00+01:00"},
   "intensity_hint": {"status": "given", "code": "as_planned"},
   "indoor_alternative": {"status": "not_suggested"},
@@ -76,6 +76,9 @@ Response (sandbox, shortened):
 How to read the response:
 - Every optional part has an explicit `status`. Read it instead of testing for missing fields:
   - `window.status` is `found` or `none`. With `none`, nothing fits the options; that is a normal 200 answer.
+  - With `found`, `start` to `end` is the suitable period, at least the activity's duration long. Start the
+    activity any time from `start` to `latest_start`; it then ends by `end` (`latest_start` = `end` − duration).
+    In the example, a 45-minute run can start from 07:00 until 10:15 and is finished by 11:00.
   - `intensity_hint.status` is `given` or `none`.
 - Times are local, with the offset of that moment. Daylight-saving days are handled.
 - `data.status` is `ok` or `degraded`. `degraded` means the forecast is older than usual, or a data check

@@ -113,9 +113,11 @@ def test_window_fits_duration_and_options(api):
         w = api.guidance(duration_min=minutes, earliest_start="06:00", latest_start="18:00").json()["window"]
         assert w["status"] == "found"
         start, end = datetime.fromisoformat(w["start"]), datetime.fromisoformat(w["end"])
-        assert end - start == timedelta(minutes=minutes)
-        assert "06:00" <= w["start"][11:16] <= "18:00"
-        assert start <= datetime.fromisoformat(w["latest_start"])
+        last = datetime.fromisoformat(w["latest_start"])
+        # start..end is the suitable period; latest_start = end - duration.
+        assert start <= last and last + timedelta(minutes=minutes) <= end
+        assert last + timedelta(minutes=minutes) == end
+        assert "06:00" <= w["start"][11:16] <= w["latest_start"][11:16] <= "18:00"
         assert w["start"].endswith("+01:00")
 
 
@@ -395,3 +397,20 @@ def test_spec_matches_the_request_model():
 def test_every_response_was_contract_checked():
     """Runs last in this file: the contract check saw responses from the tests above."""
     assert CONTRACT.checked > 50
+
+
+def test_inconsistent_engine_window_is_an_engine_error(api, monkeypatch):
+    """An engine result whose latest_start + duration != end is refused (500 engine-error), never served."""
+    from gotime_engine.sandbox import SandboxEngine
+
+    real = SandboxEngine.choose
+
+    def broken(self, assessment, options):
+        r = real(self, assessment, options)
+        if r.window_status == "found":
+            r.latest_start = r.window_end  # the old meaning could put latest_start after the activity's end
+        return r
+
+    monkeypatch.setattr(SandboxEngine, "choose", broken)
+    r = api.guidance()
+    assert r.status_code == 500 and r.json()["code"] == "engine-error"

@@ -86,8 +86,8 @@ never looks inside it.
 | field | type | meaning | status |
 |---|---|---|---|
 | `window_status` | `found` \| `none` | whether any window fits the options | draft, to agree with the health engine |
-| `window_start`, `window_end` | aware datetime | the suggested window; None when `none` | draft, to agree with the health engine |
-| `latest_start` | aware datetime | latest start that still gives the same intensity hint | draft, to agree with the health engine |
+| `window_start`, `window_end` | aware datetime | the suitable period, at least the duration long; None when `none` | draft, to agree with the health engine |
+| `latest_start` | aware datetime | `window_end` − duration; must satisfy `window_start` ≤ `latest_start` (the API refuses an inconsistent window with `engine-error`) | draft, to agree with the health engine |
 | `intensity_hint` | code or None | e.g. `as_planned`, `go_easier`, `light_only` (placeholder codes); None when no window | draft, to agree with the health engine |
 | `indoor_alternative` | `suggested` \| `not_suggested` | whether to offer an indoor option | draft, to agree with the health engine |
 | `reasons[]` | list | why; ordered by importance | draft, to agree with the health engine |
@@ -116,7 +116,8 @@ not.
 - No thresholds taken from literature. Each hour is only compared with the other hours of the same day:
   among the warmest hours, the higher PM2.5 hours, or (with hay_fever = yes) the higher pollen hours.
 - `choose` picks the earliest start, in 15-minute steps, with the lowest level, where every hour the
-  activity touches has data.
+  activity touches has data. The period runs from there to the last start in a row at that level, plus the
+  duration.
 
 It exists so partners can integrate and the API can be tested end to end. It is not a first version of the
 science.

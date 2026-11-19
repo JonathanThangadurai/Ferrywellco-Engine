@@ -266,15 +266,24 @@ components:
       type: object
       additionalProperties: false
       required: [status]
-      description: Draft, to agree with the health engine. start, end and latest_start are present only when status = found.
+      description: |
+        Draft, to agree with the health engine. start, end and latest_start are present only when status = found.
+        start..end is the suitable period, at least duration_min long. Starting the activity at any time from start to
+        latest_start keeps it inside the period: latest_start = end - duration_min, and start <= latest_start.
       properties:
         status: {type: string, enum: [found, none]}
-        start: {type: string, format: date-time}
-        end: {type: string, format: date-time}
+        start:
+          type: string
+          format: date-time
+          description: Start of the suitable period; the earliest suggested start of the activity.
+        end:
+          type: string
+          format: date-time
+          description: End of the suitable period; the activity should be finished by then.
         latest_start:
           type: string
           format: date-time
-          description: Latest start that still gives the same intensity hint.
+          description: Latest start that still ends by `end` (end - duration_min).
 
     Reason:
       type: object

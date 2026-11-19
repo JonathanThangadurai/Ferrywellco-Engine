@@ -189,5 +189,7 @@ never echo input values.
 2. Missing pollen: `degraded` only with `hay_fever: yes`, otherwise `ok` plus reason `pollen_not_assessed`.
 3. Radius per location: Amsterdam 15 km, Chennai 20 km.
 4. One mode per API key (sandbox or live), enforced at authentication.
+5. Window: `start`..`end` is the suitable period; `latest_start` = `end` − duration, and `start` ≤
+   `latest_start`. The API refuses an engine result that breaks this (500 `engine-error`).
 
 Open questions: health engine (`engine-interface.md`) and partner integration (`partner-guide.md`).

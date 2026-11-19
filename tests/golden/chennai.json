@@ -52,9 +52,9 @@
         "text": "Sandbox example, not guidance."
       }
     ],
-    "snapshot_id": "20261119T00Z-2829b8d8",
+    "snapshot_id": "20261119T00Z-a047de65",
     "window": {
-      "end": "2026-11-19T11:15:00+05:30",
+      "end": "2026-11-19T16:30:00+05:30",
       "latest_start": "2026-11-19T15:45:00+05:30",
       "start": "2026-11-19T10:30:00+05:30",
       "status": "found"

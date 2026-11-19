@@ -43,6 +43,14 @@ def _local(t: datetime, tz: ZoneInfo) -> str:
     return t.astimezone(tz).isoformat()
 
 
+def window_consistent(result, duration: timedelta) -> bool:
+    """start..end is the suitable period and latest_start = end - duration, with start <= latest_start."""
+    start, end, latest = result.window_start, result.window_end, result.latest_start
+    if start is None or end is None or latest is None:
+        return False
+    return start <= latest and latest + duration == end
+
+
 def handle(
     req: GuidanceRequest, loaded: Loaded, settings: Settings, now_utc: datetime, request_id: str
 ) -> tuple[dict, dict]:
@@ -75,6 +83,9 @@ def handle(
         result = loaded.engine.choose(assessment, WindowOptions(earliest, latest, req.duration_min))
     except Exception as e:
         raise Problem(500, "engine-error") from e
+
+    if result.window_status == "found" and not window_consistent(result, duration):
+        raise Problem(500, "engine-error", detail="The engine returned an inconsistent window.")
 
     tz = ZoneInfo(loc["timezone"])
     window = {"status": result.window_status}

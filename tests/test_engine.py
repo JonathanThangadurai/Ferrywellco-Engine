@@ -129,11 +129,12 @@ def test_window_fits_the_whole_activity():
     levels = [0] * 24
     levels[8] = None  # 08:00-09:00 has no data
     result = SandboxEngine().choose(_assessment(levels), _options("07:00", "12:00", 90))
-    # 07:00 + 90 min would touch 08:00 (missing); the first start after the gap is 09:00.
+    # 07:00 + 90 min would touch 08:00 (missing); the period starts after the gap at 09:00 and lasts until
+    # the latest allowed start (12:00) plus the duration.
     assert result.window_status == "found"
     assert result.window_start.hour == 9 and result.window_start.minute == 0
-    assert result.window_end - result.window_start == timedelta(minutes=90)
-    assert result.latest_start.hour == 12
+    assert result.latest_start.hour == 12 and result.latest_start.minute == 0
+    assert result.window_end == result.latest_start + timedelta(minutes=90)
 
 
 def test_window_prefers_lower_level_then_earliest():
@@ -142,6 +143,7 @@ def test_window_prefers_lower_level_then_earliest():
     result = SandboxEngine().choose(_assessment(levels), _options("06:00", "18:00", 60))
     assert result.window_start.hour == 14 and result.window_start.minute == 0
     assert result.latest_start.hour == 15  # 15:00-16:00 is still level 0; 15:15 would touch 16:00
+    assert result.window_end.hour == 16 and result.window_end.minute == 0  # the period is 14:00-16:00
     assert result.intensity_hint == "as_planned"
     assert result.indoor_alternative == "not_suggested"
 
