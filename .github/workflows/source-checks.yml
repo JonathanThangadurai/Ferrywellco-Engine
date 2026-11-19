@@ -1,0 +1,45 @@
+# Nightly live access and format check per source. Keys from repository secrets and variables.
+# On failure: one GitHub issue per source (label source-check) is opened or updated; closed when it passes.
+name: Source checks (nightly)
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2 # ADS/CDS take one request at a time per dataset; keep the load small
+      matrix:
+        source: [eea, knmi, ecmwf, cams_eu, cams_global, openaq]
+    env:
+      KNMI_API_KEY: ${{ secrets.KNMI_API_KEY }}
+      KNMI_EDR_API_KEY: ${{ secrets.KNMI_EDR_API_KEY }}
+      COPERNICUS_KEY: ${{ secrets.COPERNICUS_KEY }}
+      OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+      ADS_URL: ${{ vars.ADS_URL }}
+      CDS_URL: ${{ vars.CDS_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.26"
+      - run: uv sync --frozen --no-dev
+      - name: Check ${{ matrix.source }}
+        id: check
+        run: |
+          set +e
+          uv run gotime-ops source-check "${{ matrix.source }}" > result.txt
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/ci_source_issue.sh "${{ matrix.source }}" "${{ steps.check.outputs.status }}" result.txt

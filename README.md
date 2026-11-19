@@ -6,8 +6,8 @@ The GOTime data layer turns weather and air quality forecasts and observations i
 which the wellness algorithm reads through a small interface. GOTime gives wellness guidance (when and how to be active
 outside); it is not a health service.
 
-Status: stages A to C done (data layer). **Stage D2 (GOTime API with a sandbox engine) built, awaiting review.**
-Deployment (Docker, Caddy, scheduler) is stage D3.
+Status: stages A to D2 done (data layer, GOTime API with a sandbox engine). **Stage D3 (deployment, scheduler,
+monitoring, CI) on branch `d3-ops`, awaiting review.**
 
 ## What each stage does
 
@@ -49,6 +49,16 @@ Tilman's engine and a clearly synthetic `SandboxEngine`), then the API (`gotime_
 snapshot from memory. API keys live hashed in `GOTIME_API_KEYS_FILE` (default `~/.config/gotime/api_keys.json`,
 outside the repo). Settings are in `config/serving.yaml`.
 
+### Operations (stage D3)
+
+```
+uv run gotime-ops scheduler              # forecast schedule: fetch, ingest, quality check, precompute; heartbeats
+uv run gotime-ops monitor --every 900    # synthetic check of the API; HC_PING_MONITOR
+uv run gotime-ops source-check ecmwf     # live access and format check of one source
+uv run gotime-ops backup | restore       # archive/, meta/, climatology/ <-> GOTIME_BACKUP_TARGET
+docker compose up -d                     # api, scheduler, monitor, caddy (docs/operations.md)
+```
+
 Stage B measurement scripts: `scripts/check_access.py`, `scripts/size_test.py` (see `docs/size-test.md`).
 
 ADS/CDS (CAMS, ERA5) allow only a few queued requests per dataset; the pipeline sends one request at a time.
@@ -65,6 +75,9 @@ OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hour
 - `docs/api-design.md`: GOTime API design, stage D1 (draft for review).
 - `docs/engine-interface.md`: where the guidance engine plugs in (draft, to agree with Tilman).
 - `docs/openapi.yaml`: API 0.1.0 draft (to agree with AEIVA).
+- `docs/partner-guide.md`: how AEIVA uses the sandbox; `docs/postman/`: Postman collection and environment template.
+- `docs/operations.md`: deploying on the server, keys, alerts, backups.
+- `docs/testing.md`: what runs where and when.
 - `docs/architecture/gotime-data-architecture-v1.drawio`: architecture diagram (open with [diagrams.net](https://app.diagrams.net/)).
 
 ## Environment variables (names only; never commit values)
@@ -80,6 +93,9 @@ OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hour
 | `GOTIME_STORAGE_ROOT` | storage root, local path or `s3://...` (default `./data`) |
 | `GOTIME_API_KEYS_FILE` | hashed partner API keys (default `~/.config/gotime/api_keys.json`) |
 | `GOTIME_SERVING_CONFIG` | API settings file (default `config/serving.yaml`) |
+| `HC_PING_INGEST`, `HC_PING_PRECOMPUTE`, `HC_PING_MONITOR` | heartbeat ping URLs (treated as secrets; unset = skipped) |
+| `GOTIME_MONITOR_KEY` | sandbox API key used by the synthetic monitor |
+| `GOTIME_BACKUP_TARGET` | backup folder or `s3://...` |
 
 ERA5 and CAMS both use `COPERNICUS_KEY`; `~/.cdsapirc` holds the same CDS key for other tools. If the variables are not set, scripts read `~/.config/gotime/keys.env`.
 

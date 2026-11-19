@@ -1,0 +1,46 @@
+{
+  "body": {
+    "locations": [
+      {
+        "aliases": [
+          "amsterdam"
+        ],
+        "data_status": "ok",
+        "dates_available": [
+          "2026-11-19",
+          "2026-11-20",
+          "2026-11-21",
+          "2026-11-22"
+        ],
+        "forecast_until": "2026-11-22T23:00:00Z",
+        "id": "ecmwf0p1_n52.40_e4.90",
+        "lat": 52.4,
+        "lon": 4.9,
+        "name": "Amsterdam",
+        "radius_km": 15.0,
+        "timezone": "Europe/Amsterdam"
+      },
+      {
+        "aliases": [
+          "chennai"
+        ],
+        "data_status": "ok",
+        "dates_available": [
+          "2026-11-19",
+          "2026-11-20",
+          "2026-11-21",
+          "2026-11-22"
+        ],
+        "forecast_until": "2026-11-22T19:00:00Z",
+        "id": "ecmwf0p1_n13.10_e80.20",
+        "lat": 13.1,
+        "lon": 80.2,
+        "name": "Chennai",
+        "radius_km": 20.0,
+        "timezone": "Asia/Kolkata"
+      }
+    ],
+    "snapshot_id": "20261119T00Z-2829b8d8"
+  },
+  "status": 200
+}

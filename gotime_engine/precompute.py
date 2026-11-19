@@ -12,7 +12,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import pandas as pd
 
-from gotime_data.config import locations
+from gotime_data.config import filesystem, locations
 from gotime_data.read import get_hourly
 from gotime_data.store import read_sites
 
@@ -51,8 +51,15 @@ def local_dates(tz: str, now_utc: datetime, days: int = DAYS) -> list[date]:
     return [today + timedelta(days=i) for i in range(days)]
 
 
+def quality_status(source: str) -> str:
+    """'failed' when the newest data quality check of this source failed (meta/quality/), else 'ok'."""
+    fs, root = filesystem()
+    path = f"{root}/meta/quality/{source}.json"
+    return json.loads(fs.cat_file(path)).get("status", "ok") if fs.exists(path) else "ok"
+
+
 def source_summary(df: pd.DataFrame, required: list[str]) -> list[dict]:
-    """Per source: oldest issue time over its variables (for data age) and where the forecast ends."""
+    """Per source: oldest issue time over its variables (for data age), forecast end and quality status."""
     out = []
     for source, part in df[df["value"].notna()].groupby("source"):
         per_var = part.groupby("variable").agg(
@@ -66,6 +73,7 @@ def source_summary(df: pd.DataFrame, required: list[str]) -> list[dict]:
                 "forecast_until_utc": (per_var["last"].min() + pd.Timedelta(hours=1)).isoformat(),
                 "variables": variables,
                 "required": any(v in required for v in variables),
+                "quality": quality_status(source),
             }
         )
     return out

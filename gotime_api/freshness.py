@@ -2,6 +2,7 @@
 
 Per source: ok up to `ok` hours, degraded up to `degraded` hours, else unavailable (config/serving.yaml;
 starting values, to review after two weeks of logs).
+A source whose data quality check failed (meta/quality/) is at least degraded.
 Overall: unavailable when a required source is unavailable (the API then answers 503 data-unavailable),
 otherwise the worst status of the required sources.
 Pollen (decided after D2): when no pollen data is available for the location, the response carries the
@@ -30,11 +31,14 @@ def data_status(location: dict, now_utc: datetime, settings: Settings) -> tuple[
     for s in location["sources"]:
         issue = datetime.fromisoformat(s["issue_time_utc"])
         age_h = max((now_utc - issue).total_seconds() / 3600, 0.0)
+        status = source_status(age_h, settings.thresholds(s["source"]))
+        if s.get("quality") == "failed":  # data quality check failed after ingest: at least degraded
+            status = max(status, "degraded", key=ORDER.get)
         entries.append(
             {
                 "source": s["source"],
                 "required": s["required"],
-                "status": source_status(age_h, settings.thresholds(s["source"])),
+                "status": status,
                 "issue_time": issue.isoformat().replace("+00:00", "Z"),
                 "forecast_age_h": round(age_h, 1),
             }

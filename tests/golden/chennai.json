@@ -1,0 +1,64 @@
+{
+  "body": {
+    "data": {
+      "attribution": [
+        "Contains modified ECMWF open data (CC BY 4.0)",
+        "Generated using modified Copernicus Atmosphere Monitoring Service information (CC BY 4.0)"
+      ],
+      "sources": [
+        {
+          "forecast_age_h": 10.0,
+          "issue_time": "2026-11-19T00:00:00Z",
+          "required": true,
+          "source": "cams_global",
+          "status": "ok"
+        },
+        {
+          "forecast_age_h": 10.0,
+          "issue_time": "2026-11-19T00:00:00Z",
+          "required": true,
+          "source": "ecmwf_ifs",
+          "status": "ok"
+        }
+      ],
+      "status": "ok"
+    },
+    "date": "2026-11-19",
+    "indoor_alternative": {
+      "status": "not_suggested"
+    },
+    "intensity_hint": {
+      "code": "as_planned",
+      "status": "given"
+    },
+    "location": {
+      "alias": "chennai",
+      "distance_km": 7.9,
+      "id": "ecmwf0p1_n13.10_e80.20",
+      "timezone": "Asia/Kolkata"
+    },
+    "mode": "sandbox",
+    "reasons": [
+      {
+        "code": "pollen_not_assessed",
+        "params": {},
+        "source": "data_layer",
+        "text": "No pollen forecast is available for this place, so pollen was not taken into account."
+      },
+      {
+        "code": "sandbox_example",
+        "params": {},
+        "source": "sandbox",
+        "text": "Sandbox example, not guidance."
+      }
+    ],
+    "snapshot_id": "20261119T00Z-2829b8d8",
+    "window": {
+      "end": "2026-11-19T11:15:00+05:30",
+      "latest_start": "2026-11-19T15:45:00+05:30",
+      "start": "2026-11-19T10:30:00+05:30",
+      "status": "found"
+    }
+  },
+  "status": 200
+}

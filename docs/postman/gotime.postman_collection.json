@@ -1,0 +1,466 @@
+{
+  "info": {
+    "_postman_id": "5f8e2b8e-6a1d-4f7e-9c1b-2d7f3c4a9b10",
+    "name": "GOTime API 0.1.0 (sandbox)",
+    "description": "GOTime API sandbox requests (docs/partner-guide.md). Responses in the sandbox are synthetic examples, not guidance. The folder 'Test environment only' needs the CI test setup (fixed clocks, a revoked key).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// date: use the environment value, or tomorrow (UTC), which is a valid local date in every covered city.",
+          "if (!pm.environment.get('date')) {",
+          "  const d = new Date(Date.now() + 24 * 3600 * 1000);",
+          "  pm.variables.set('date', d.toISOString().slice(0, 10));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Sandbox",
+      "item": [
+        {
+          "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/health"
+          }
+        },
+        {
+          "name": "Ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ready\", () => pm.expect(pm.response.json().status).to.eql(\"ready\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v1/ready"
+          }
+        },
+        {
+          "name": "Coverage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"locations\", () => pm.expect(pm.response.json().locations.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/coverage"
+          }
+        },
+        {
+          "name": "Normal: Amsterdam",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"sandbox mode is flagged\", () => pm.expect(b.mode).to.eql(\"sandbox\"));",
+                  "pm.test(\"attribution present\", () => pm.expect(b.data.attribution.length).to.be.above(0));",
+                  "pm.test(\"Amsterdam\", () => pm.expect(b.location.alias).to.eql(\"amsterdam\"));",
+                  "pm.test(\"window found\", () => pm.expect(b.window.status).to.eql(\"found\"));",
+                  "pm.test(\"data ok (fixed test clock only)\", () => { if (pm.environment.get(\"expectFresh\") === \"true\") pm.expect(b.data.status).to.eql(\"ok\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 52.37,\n    \"lon\": 4.9\n  },\n  \"date\": \"{{date}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 45,\n  \"hay_fever\": \"yes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Chennai",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"sandbox mode is flagged\", () => pm.expect(b.mode).to.eql(\"sandbox\"));",
+                  "pm.test(\"attribution present\", () => pm.expect(b.data.attribution.length).to.be.above(0));",
+                  "pm.test(\"Chennai\", () => pm.expect(b.location.alias).to.eql(\"chennai\"));",
+                  "pm.test(\"local offset +05:30\", () => pm.expect(b.window.start).to.include(\"+05:30\"));",
+                  "pm.test(\"pollen not assessed\", () => pm.expect(b.reasons.map(r => r.code)).to.include(\"pollen_not_assessed\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 13.08,\n    \"lon\": 80.27\n  },\n  \"date\": \"{{date}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"walk\",\n  \"duration_min\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Not covered (Paris)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"problem+json\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\"));",
+                  "pm.test(\"code not-covered\", () => pm.expect(pm.response.json().code).to.eql(\"not-covered\"));",
+                  "pm.test(\"request id\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 48.86,\n    \"lon\": 2.35\n  },\n  \"date\": \"{{date}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Bad input (duration 5 min)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"problem+json\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\"));",
+                  "pm.test(\"code invalid-request\", () => pm.expect(pm.response.json().code).to.eql(\"invalid-request\"));",
+                  "pm.test(\"request id\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));",
+                  "pm.test(\"field named\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"duration_min\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 52.37,\n    \"lon\": 4.9\n  },\n  \"date\": \"{{date}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "No window fits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"sandbox mode is flagged\", () => pm.expect(b.mode).to.eql(\"sandbox\"));",
+                  "pm.test(\"attribution present\", () => pm.expect(b.data.attribution.length).to.be.above(0));",
+                  "pm.test(\"no window\", () => pm.expect(b.window.status).to.eql(\"none\"));",
+                  "pm.test(\"no hint\", () => pm.expect(b.intensity_hint.status).to.eql(\"none\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 52.37,\n    \"lon\": 4.9\n  },\n  \"date\": \"{{date}}\",\n  \"earliest_start\": \"23:30\",\n  \"latest_start\": \"23:30\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 60\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Missing key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"problem+json\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\"));",
+                  "pm.test(\"code unauthorized\", () => pm.expect(pm.response.json().code).to.eql(\"unauthorized\"));",
+                  "pm.test(\"request id\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 52.37,\n    \"lon\": 4.9\n  },\n  \"date\": \"{{date}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test environment only",
+      "item": [
+        {
+          "name": "Revoked key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"problem+json\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\"));",
+                  "pm.test(\"code unauthorized\", () => pm.expect(pm.response.json().code).to.eql(\"unauthorized\"));",
+                  "pm.test(\"request id\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{revokedKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 52.37,\n    \"lon\": 4.9\n  },\n  \"date\": \"{{date}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Degraded (stale forecast)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"sandbox mode is flagged\", () => pm.expect(b.mode).to.eql(\"sandbox\"));",
+                  "pm.test(\"attribution present\", () => pm.expect(b.data.attribution.length).to.be.above(0));",
+                  "pm.test(\"degraded\", () => pm.expect(b.data.status).to.eql(\"degraded\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{degradedUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 52.37,\n    \"lon\": 4.9\n  },\n  \"date\": \"{{degradedDate}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Unavailable (forecast too old)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 503\", () => pm.response.to.have.status(503));",
+                  "pm.test(\"problem+json\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\"));",
+                  "pm.test(\"code data-unavailable\", () => pm.expect(pm.response.json().code).to.eql(\"data-unavailable\"));",
+                  "pm.test(\"request id\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));",
+                  "pm.test(\"Retry-After\", () => pm.expect(pm.response.headers.get(\"Retry-After\")).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}"
+              }
+            ],
+            "url": "{{unavailableUrl}}/v1/guidance",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 52.37,\n    \"lon\": 4.9\n  },\n  \"date\": \"{{unavailableDate}}\",\n  \"earliest_start\": \"07:00\",\n  \"latest_start\": \"19:00\",\n  \"activity_type\": \"run\",\n  \"duration_min\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
