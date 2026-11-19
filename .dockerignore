@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+.ruff_cache
+.pytest_cache
+.hypothesis
+**/__pycache__
+data
+tests
+scripts
+docs
+deploy
+*.env
+.env
+.cdsapirc

@@ -1,0 +1,69 @@
+# GOTime on one 4 GB server (docs/operations.md). Everything secret stays outside the repo:
+#   ${GOTIME_ETC:-/etc/gotime}/gotime.env    keys, heartbeat URLs, monitor key, domain (chmod 600)
+#   ${GOTIME_ETC:-/etc/gotime}/keys/         hashed partner API keys (owned by uid 10001, chmod 700/600)
+#   ${GOTIME_DATA:-/srv/gotime/data}         storage root (owned by uid 10001)
+#   ${GOTIME_BACKUP:-/srv/gotime/backup}     backup target (owned by uid 10001)
+#
+# Memory budget (4 GB): api 512 MB (2 workers, ~135 MB each) + scheduler 1.5 GB (ECMWF decode peaks at
+# ~570 MB) + monitor 256 MB + caddy 128 MB = ~2.4 GB, leaving ~1.6 GB for the OS and file cache.
+
+x-app: &app
+  build: .
+  image: gotime:latest
+  restart: unless-stopped
+  env_file: ${GOTIME_ETC:-/etc/gotime}/gotime.env
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: {max-size: "20m", max-file: "5"}
+
+services:
+  api:
+    <<: *app
+    command: ["gotime-api", "serve", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+    volumes:
+      - ${GOTIME_DATA:-/srv/gotime/data}:/data:ro
+      - ${GOTIME_ETC:-/etc/gotime}/keys:/run/gotime/keys:ro
+    mem_limit: 512m
+    cpus: 1.5
+    expose: ["8000"]
+
+  scheduler:
+    <<: *app
+    command: ["gotime-ops", "scheduler"]
+    environment:
+      GOTIME_BACKUP_TARGET: /backup
+    volumes:
+      - ${GOTIME_DATA:-/srv/gotime/data}:/data
+      - ${GOTIME_BACKUP:-/srv/gotime/backup}:/backup
+    mem_limit: 1536m
+    cpus: 1.0
+    healthcheck: {disable: true}
+
+  monitor:
+    <<: *app
+    command: ["gotime-ops", "monitor", "--every", "900"]
+    environment:
+      GOTIME_MONITOR_URL: http://api:8000
+    mem_limit: 256m
+    cpus: 0.25
+    healthcheck: {disable: true}
+    depends_on: [api]
+
+  caddy:
+    image: caddy:2.8.4-alpine
+    restart: unless-stopped
+    env_file: ${GOTIME_ETC:-/etc/gotime}/gotime.env
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 128m
+    depends_on: [api]
+
+volumes:
+  caddy_data:
+  caddy_config:

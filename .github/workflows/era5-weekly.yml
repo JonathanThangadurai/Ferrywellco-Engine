@@ -1,0 +1,35 @@
+# ERA5 is checked weekly, not nightly: its CDS queue can take hours. Same issue handling as the nightly checks.
+name: Source check ERA5 (weekly)
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      COPERNICUS_KEY: ${{ secrets.COPERNICUS_KEY }}
+      CDS_URL: ${{ vars.CDS_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.9.26"
+      - run: uv sync --frozen --no-dev
+      - name: Check era5
+        id: check
+        run: |
+          set +e
+          uv run gotime-ops source-check era5 > result.txt
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/ci_source_issue.sh era5 "${{ steps.check.outputs.status }}" result.txt
