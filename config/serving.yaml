@@ -1,0 +1,26 @@
+# GOTime API settings (docs/api-design.md). Placeholder values until agreed.
+
+# Modes this API serves. Each has its own snapshot (serving/<mode>/CURRENT). "live" is added once
+# the health engine exists.
+modes: [sandbox]
+
+# Data age = request time - forecast issue time, in hours. Up to `ok`: ok; up to `degraded`: degraded;
+# older: unavailable (no guidance, 503 data-unavailable).
+freshness_h:
+  ecmwf_ifs: {ok: 18, degraded: 36}
+  cams_eu: {ok: 36, degraded: 60}
+  cams_global: {ok: 30, degraded: 54}
+  default: {ok: 24, degraded: 48}
+
+# Shown in every guidance response for the sources used.
+attribution:
+  ecmwf_ifs: "Contains modified ECMWF open data (CC BY 4.0)"
+  cams_eu: "Generated using modified Copernicus Atmosphere Monitoring Service information (CC BY 4.0)"
+  cams_global: "Generated using modified Copernicus Atmosphere Monitoring Service information (CC BY 4.0)"
+
+rate_limit: {per_minute: 60, burst: 20}  # default per API key; a key can have its own
+max_body_bytes: 4096
+max_days_ahead: 3                     # date may be today .. today + 3 (local at the location)
+ready_max_snapshot_age_h: 18          # /v1/ready fails when the served snapshot is older
+snapshot_reload_s: 30                 # how often the API checks serving/<mode>/CURRENT
+keys_reload_s: 5                      # how often the API checks the keys file for changes

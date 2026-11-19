@@ -31,18 +31,17 @@ request. Both steps belong to the health engine (`engine-interface.md`).
 
 ## 2. Serving snapshot
 
-- **Content:** `serving/<mode>/<snapshot_id>/` holds:
-  - `manifest.json`: snapshot_id, mode, engine name and version, created time, and the cycles used per source
-    (issue and publish time).
-  - `locations.json`: the resolved locations, with the per-source cell for each.
-  - `assessments.json.gz`: keyed by `(location_id, local_date, profile_id)`.
-  - `checksums.json`.
-- **snapshot_id** = `<newest issue time>-<first 8 characters of a hash over the cycles used and the engine
-  version>`, e.g. `20261119T06Z-3fa9c2d1`. The same inputs give the same id, so a rerun is harmless.
+- **Content:** one file per snapshot, `serving/<mode>/<snapshot_id>.json.gz` (`gotime_engine/snapshot.py`):
+  snapshot_id, mode, engine name and version, created time, expected time of the next one, the locations
+  (id, alias, cell, radius, time zone, dates, and per source the issue time, forecast end and whether it is
+  required), and the assessments keyed `location_id|local_date|profile_id`. Per-location results only:
+  nothing about requests or people. Today: 2 locations × 4 dates × 36 profiles = 288 assessments, ~11 KB.
+- **snapshot_id** = `<newest issue time>-<first 8 characters of a hash over the cycles used, the dates and the
+  engine version>`, e.g. `20261118T00Z-f9228fd3`. The same inputs give the same id, so a rerun does nothing.
 - **Atomic swap:**
-  1. precompute writes the folder under a temporary name, verifies the checksums and renames it.
-  2. Only then does it replace `serving/<mode>/CURRENT` (a one-line file with the id). It writes a temporary
-     file and calls `os.replace`, which is atomic on POSIX. On S3, a single-object PUT is atomic.
+  1. precompute writes the file under a temporary name and renames it, then reads it back.
+  2. Only then does it replace `serving/<mode>/CURRENT` (a one-line file with the id), again via a temporary
+     file and a rename (atomic on POSIX; on S3 a single-object PUT is atomic).
 - **Reload:** the API checks `CURRENT` every 30 s. When the id changes, it loads and validates the whole new
   snapshot next to the old one, then swaps one Python reference. A request in flight keeps the snapshot it
   started with. If the new snapshot fails to load, the API keeps the old one and logs an error.
@@ -90,8 +89,9 @@ manifest, because the age grows while the snapshot is served. Thresholds are pla
   Pollen is optional: if it is unavailable, the response says so in its source entry and drops to `degraded`.
 - `unavailable`: no guidance is given and the API returns **503 `data-unavailable`** with `Retry-After`.
   `degraded` still returns 200, with the status stated.
-- Horizon: a request whose window (latest start + duration) lies beyond the forecast end of a required source
-  gets **422 `beyond-forecast-horizon`**. `GET /v1/coverage` lists `forecast_until` per location.
+- Horizon: a window must fit the whole activity inside the forecast. The latest start is cut back to
+  forecast end − duration; if even the earliest start does not fit (or the date is not in the snapshot), the
+  answer is **422 `beyond-forecast-horizon`**. `GET /v1/coverage` lists `forecast_until` per location.
 
 ## 5. Scaling path
 
@@ -101,20 +101,30 @@ manifest, because the age grows while the snapshot is served. Thresholds are pla
    loads the snapshot. Rate limits are per copy at first (limit ÷ copies); later they move to a shared counter
    (e.g. Redis) or Caddy.
 3. **More cells:** add locations to the config. Precompute runs per location, so it can run in parallel, and
-   each location is independent. Snapshot size grows linearly: 2 locations × 4 dates × 24 profiles today. At
+   each location is independent. Snapshot size grows linearly: 2 locations × 4 dates × 36 profiles today. At
    thousands of cells, split the snapshot per region and load only the regions a copy serves.
 4. **More machines:** set the storage root to `s3://...` (fsspec is already in place). Then ingest, precompute
    and API copies can run on different machines.
 
-## 6. Performance targets
+## 6. Performance targets and measurements
 
-- p95 < 100 ms at the server for `POST /v1/guidance`, measured from the in-memory snapshot (lookup + `choose`,
-  which works over at most 24 hourly values).
-- Budgets:
-  - `choose` < 5 ms.
-  - Snapshot reload < 5 s, off the request path.
-  - Precompute < 2 min per cycle for today's locations.
-- Coverage, health and ready responses < 20 ms.
+- **Target:** p95 < 100 ms at the server for `POST /v1/guidance`, measured from the in-memory snapshot
+  (lookup + `choose`, which works over at most 25 hourly values).
+- **Budgets:** `choose` < 5 ms; snapshot reload < 5 s, off the request path; precompute < 2 min per cycle.
+- **Measured** on 2026-11-19 (MacBook M1 Pro, 8 cores), using `scripts/load_test.py` against `gotime-api serve`.
+  The snapshot came from real ECMWF and CAMS data (18 Nov 00 UTC) for both cities. Requests mixed locations,
+  dates, activities, durations and time ranges, and were all valid (200).
+
+  | measurement | p50 | p95 | p99 | throughput |
+  |---|---|---|---|---|
+  | server side (`latency_ms` in the log), 5000 requests | 2.5 ms | 4.7 ms | 7.9 ms | |
+  | client side, 1 client, 2000 requests | 1.6 ms | 1.8 ms | 2.3 ms | 630 req/s |
+  | client side, 20 concurrent clients, 5000 requests | 20 ms | 190 ms | 420 ms | 430–460 req/s |
+
+  With 20 clients the client-side tail is the load generator's own limit: it is one Python process on the
+  same machine and tops out at about 450 requests/s. Four API workers gave the same numbers, and the server
+  side stays under 5 ms at p95. A load generator on a separate machine is needed to find the server's real
+  ceiling. Precompute took about 1 s for 288 assessments (3 s including start-up).
 
 ## 7. Security and privacy
 

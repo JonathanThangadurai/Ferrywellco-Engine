@@ -6,8 +6,8 @@ The GOTime data layer turns weather and air quality forecasts and observations i
 which the wellness algorithm reads through a small interface. GOTime gives wellness guidance (when and how to be active
 outside); it is not a health service.
 
-Status: **Stage C (ingestion pipeline and read interface) done, awaiting review.** Scheduling (cron in Docker) and
-the partner API (FastAPI) come later.
+Status: stages A to C done (data layer). **Stage D2 (GOTime API with a sandbox engine) built, awaiting review.**
+Deployment (Docker, Caddy, scheduler) is stage D3.
 
 ## What each stage does
 
@@ -33,6 +33,21 @@ uv run gotime-data clean
 uv run pytest                             # no network; small saved fixtures in tests/fixtures/
 uv run ruff check .
 ```
+
+### API (stage D)
+
+```
+uv run gotime-api precompute              # after ingest: new serving snapshot if the forecast cycles changed
+uv run gotime-api keys create --partner partner-app --mode sandbox   # key written once to a 600 file, never printed
+uv run gotime-api keys list | revoke <key_id>
+uv run gotime-api serve --port 8000       # POST /v1/guidance, GET /v1/coverage, /v1/health, /v1/ready
+uv run python scripts/load_test.py --key-file <file>   # p50/p95 latency and requests/s
+```
+
+Three separate processes share only storage: ingest, then precompute (`gotime_engine/`: the engine protocol for
+the health engine and a clearly synthetic `SandboxEngine`), then the API (`gotime_api/`). The API serves the
+snapshot from memory. API keys live hashed in `GOTIME_API_KEYS_FILE` (default `~/.config/gotime/api_keys.json`,
+outside the repo). Settings are in `config/serving.yaml`.
 
 Stage B measurement scripts: `scripts/check_access.py`, `scripts/size_test.py` (see `docs/size-test.md`).
 
@@ -63,6 +78,8 @@ OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hour
 | `CDS_URL` | CDS API URL (ERA5) |
 | `OPENAQ_API_KEY` | OpenAQ (Chennai observations, internal use only) |
 | `GOTIME_STORAGE_ROOT` | storage root, local path or `s3://...` (default `./data`) |
+| `GOTIME_API_KEYS_FILE` | hashed partner API keys (default `~/.config/gotime/api_keys.json`) |
+| `GOTIME_SERVING_CONFIG` | API settings file (default `config/serving.yaml`) |
 
 ERA5 and CAMS both use `COPERNICUS_KEY`; `~/.cdsapirc` holds the same CDS key for other tools. If the variables are not set, scripts read `~/.config/gotime/keys.env`.
 

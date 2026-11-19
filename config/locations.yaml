@@ -1,6 +1,7 @@
 # GOTime V1 locations.
 # lat/lon: city centre point used for "nearest grid cell" point values.
 # tz: IANA time zone; data is stored in UTC and converted per instant with this zone.
+# radius_km: the API serves requests within this distance of the location's weather grid cell (default 15).
 # bbox: small crop box [lat_min, lat_max, lon_min, lon_max] in degrees, used to cut grids
 #   right after download. It spans at least 2 cells of the coarsest grid we use
 #   (CAMS global, 0.4 deg), so nearest-cell lookup and later interpolation have neighbours.
@@ -11,6 +12,7 @@ locations:
     lat: 52.37
     lon: 4.90
     tz: Europe/Amsterdam
+    radius_km: 15
     bbox: [51.9, 52.9, 4.3, 5.5]
 
   chennai:
@@ -18,4 +20,5 @@ locations:
     lat: 13.08
     lon: 80.27
     tz: Asia/Kolkata
+    radius_km: 15
     bbox: [12.6, 13.6, 79.7, 80.8]

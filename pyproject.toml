@@ -10,6 +10,7 @@ dependencies = [
     "duckdb>=2.0.0",
     "eccodes>=2.50.1",
     "eccodeslib>=2.50.0.34",
+    "fastapi>=0.115",
     "fsspec>=2026.9.0",
     "h5netcdf>=1.8.3",
     "h5py>=3.16.0",
@@ -17,12 +18,15 @@ dependencies = [
     "netcdf4>=1.7.5.1.post1",
     "pandas>=3.1.1",
     "pyarrow>=26.0.1",
+    "pydantic>=2.9",
     "pyyaml>=6.0",
+    "uvicorn>=0.32",
     "xarray>=2026.9.0",
 ]
 
 [project.scripts]
 gotime-data = "gotime_data.cli:main"
+gotime-api = "gotime_api.cli:main"
 
 # eccodeslib ships the ecCodes C library as a wheel, so no system install is needed.
 # s3fs is added when storage moves to s3://.
@@ -32,11 +36,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["gotime_data"]
+packages = ["gotime_data", "gotime_api", "gotime_engine"]
 
 [dependency-groups]
 dev = [
+    "jsonschema>=4.26.0",
     "pytest>=8.0",
+    "rfc3339-validator>=0.1.4",
     "ruff>=0.6",
 ]
 
@@ -49,3 +55,5 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Starlette suggests httpx2 for its test client; httpx still works. Revisit when FastAPI moves.
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]

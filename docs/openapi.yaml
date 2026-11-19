@@ -62,6 +62,10 @@ paths:
       summary: Supported locations, radius, time zone and available dates
       parameters:
         - $ref: '#/components/parameters/RequestId'
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: {type: string}
       responses:
         '200':
           description: Coverage of the current snapshot
@@ -71,6 +75,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/CoverageResponse'}
+        '304': {description: Not modified (same snapshot)}
         '401': {$ref: '#/components/responses/Problem'}
         '429': {$ref: '#/components/responses/ProblemRetry'}
         '503': {$ref: '#/components/responses/ProblemRetry'}
@@ -228,9 +233,10 @@ components:
         intensity_hint:
           type: object
           additionalProperties: false
-          required: [code]
-          description: Draft, to agree with the health engine. Codes are placeholders.
+          required: [status]
+          description: Draft, to agree with the health engine. Codes are placeholders. `code` is present only when status = given (status = none when no window was found).
           properties:
+            status: {type: string, enum: [given, none]}
             code: {type: string, examples: [as_planned, go_easier, light_only]}
         indoor_alternative:
           type: object
@@ -354,7 +360,9 @@ components:
             - not-covered               # 422: no supported location within radius
             - date-out-of-range         # 422: date not within today..today+3 (local)
             - beyond-forecast-horizon   # 422: window ends after the forecast
-            - unauthorized              # 401: missing or invalid key
+            - unauthorized              # 401: missing, invalid or revoked key
+            - not-found                 # 404: unknown path
+            - method-not-allowed        # 405
             - payload-too-large         # 413
             - rate-limited              # 429
             - engine-error              # 500
