@@ -5,6 +5,7 @@ of an engine (docs/api-design.md). Logic lives in guidance.py, locations.py and 
 """
 
 import logging
+import os
 import re
 import threading
 import time
@@ -20,6 +21,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .auth import KeyRecord, KeyStore
 from .guidance import coverage, etag, handle, max_age_s
 from .logs import ACCESS, setup_logging
+from .metrics import Metrics
 from .models import parse_request
 from .problems import Problem, problem_response
 from .ratelimit import RateLimiter
@@ -27,6 +29,7 @@ from .settings import Settings, load_settings
 from .snapshots import Loaded, SnapshotStore
 
 REQUEST_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+METRICS_EVERY_S = 60
 log = logging.getLogger(__name__)
 
 
@@ -41,6 +44,7 @@ def create_app(
     clock = clock or (lambda: datetime.now(UTC))
     keys = keys or KeyStore(settings.keys_file, settings.keys_reload_s)
     limiter = RateLimiter()
+    metrics = Metrics()
     if stores is None:
         stores = {mode: SnapshotStore(mode) for mode in settings.modes}
         for store in stores.values():
@@ -52,9 +56,14 @@ def create_app(
         stop = threading.Event()
 
         def loop():
+            last_metrics = time.monotonic()
             while not stop.wait(settings.snapshot_reload_s):
                 for store in stores.values():
                     store.reload()
+                if time.monotonic() - last_metrics >= METRICS_EVERY_S:
+                    last_metrics = time.monotonic()
+                    current = {mode: store.current for mode, store in stores.items()}
+                    ACCESS.info("metrics", extra={"fields": metrics.flush(current, clock())})
 
         if reload_in_background:
             threading.Thread(target=loop, name="snapshot-reload", daemon=True).start()
@@ -94,6 +103,7 @@ def create_app(
             **request.state.log,
         }
         ACCESS.info("request", extra={"fields": fields})
+        metrics.record(response.status_code, fields["latency_ms"])
         return response
 
     @app.exception_handler(Problem)
@@ -183,6 +193,17 @@ def create_app(
 
 
 def serve_app() -> FastAPI:
-    """Factory for uvicorn (`gotime-api serve`): JSON logs in every worker process, then the app."""
+    """Factory for uvicorn (`gotime-api serve`): JSON logs in every worker process, then the app.
+
+    GOTIME_TEST_NOW (ISO time) fixes the clock for end-to-end tests against a fixed snapshot. It is refused
+    unless GOTIME_ENV=test, so it can never be switched on by accident in production.
+    """
     setup_logging()
+    fixed = os.environ.get("GOTIME_TEST_NOW")
+    if fixed:
+        if os.environ.get("GOTIME_ENV") != "test":
+            raise RuntimeError("GOTIME_TEST_NOW is only allowed with GOTIME_ENV=test")
+        now = datetime.fromisoformat(fixed)
+        log.warning("TEST MODE: the clock is fixed at %s", now.isoformat())
+        return create_app(clock=lambda: now)
     return create_app()

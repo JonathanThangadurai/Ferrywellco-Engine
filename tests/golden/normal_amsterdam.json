@@ -1,0 +1,58 @@
+{
+  "body": {
+    "data": {
+      "attribution": [
+        "Contains modified ECMWF open data (CC BY 4.0)",
+        "Generated using modified Copernicus Atmosphere Monitoring Service information (CC BY 4.0)"
+      ],
+      "sources": [
+        {
+          "forecast_age_h": 10.0,
+          "issue_time": "2026-11-19T00:00:00Z",
+          "required": true,
+          "source": "cams_eu",
+          "status": "ok"
+        },
+        {
+          "forecast_age_h": 10.0,
+          "issue_time": "2026-11-19T00:00:00Z",
+          "required": true,
+          "source": "ecmwf_ifs",
+          "status": "ok"
+        }
+      ],
+      "status": "ok"
+    },
+    "date": "2026-11-19",
+    "indoor_alternative": {
+      "status": "not_suggested"
+    },
+    "intensity_hint": {
+      "code": "as_planned",
+      "status": "given"
+    },
+    "location": {
+      "alias": "amsterdam",
+      "distance_km": 3.3,
+      "id": "ecmwf0p1_n52.40_e4.90",
+      "timezone": "Europe/Amsterdam"
+    },
+    "mode": "sandbox",
+    "reasons": [
+      {
+        "code": "sandbox_example",
+        "params": {},
+        "source": "sandbox",
+        "text": "Sandbox example, not guidance."
+      }
+    ],
+    "snapshot_id": "20261119T00Z-2829b8d8",
+    "window": {
+      "end": "2026-11-19T07:45:00+01:00",
+      "latest_start": "2026-11-19T10:15:00+01:00",
+      "start": "2026-11-19T07:00:00+01:00",
+      "status": "found"
+    }
+  },
+  "status": 200
+}

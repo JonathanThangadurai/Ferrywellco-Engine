@@ -1,0 +1,9 @@
+{
+  "body": {
+    "code": "unauthorized",
+    "status": 401,
+    "title": "Missing or invalid API key",
+    "type": "urn:gotime:problem:unauthorized"
+  },
+  "status": 401
+}

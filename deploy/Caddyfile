@@ -1,0 +1,30 @@
+# Caddy: HTTPS (automatic certificates), reverse proxy to the API, request size limit.
+# GOTIME_DOMAIN and ACME_EMAIL come from /etc/gotime/gotime.env. No access log is written (it would hold IPs).
+{
+	email {$ACME_EMAIL}
+}
+
+{$GOTIME_DOMAIN} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	request_body {
+		max_size 8KB
+	}
+
+	handle /v1/* {
+		reverse_proxy api:8000 {
+			header_up -X-Forwarded-For
+		}
+	}
+
+	handle {
+		respond "Not found" 404
+	}
+}

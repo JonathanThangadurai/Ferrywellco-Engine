@@ -1,0 +1,9 @@
+{
+  "body": {
+    "code": "data-unavailable",
+    "status": 503,
+    "title": "Forecast data is too old",
+    "type": "urn:gotime:problem:data-unavailable"
+  },
+  "status": 503
+}
