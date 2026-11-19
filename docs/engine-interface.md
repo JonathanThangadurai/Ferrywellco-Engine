@@ -20,30 +20,26 @@ If you prefer a different split, tell us; only the boundary matters to the API.
 
 ## Protocol
 
+Code: `gotime_engine/protocol.py`. The sandbox stand-in is `gotime_engine/sandbox.py`.
+
 ```python
-from datetime import date, datetime
-from typing import Literal, Protocol
-import pandas as pd
-
-
 class GuidanceEngine(Protocol):
     name: str                                # e.g. "sandbox", "gotime-v1"
-    version: str                             # changes whenever results can change; part of the snapshot id
+    version: str                             # change it whenever results can change; part of the snapshot id
     mode: Literal["live", "sandbox"]
 
-    def required_variables(self) -> list[str]:
-        """Canonical variable names the engine needs (data-interface.md). Used for freshness status."""
+    def required_variables(self) -> list[str]: ...   # without them: no answer (503 data-unavailable)
+    def optional_variables(self) -> list[str]: ...   # used when present (e.g. pollen)
+    def profiles(self) -> list[Profile]: ...         # every discrete option combination to precompute
 
-    def profiles(self) -> list["Profile"]:
-        """Every discrete option combination to precompute."""
+    def assess(self, hourly: pd.DataFrame, location: LocationInfo, local_date: date,
+               profile: Profile, now_utc: datetime) -> Assessment: ...   # once per cycle; JSON-serialisable
 
-    def assess(self, hourly: pd.DataFrame, location: "LocationInfo", local_date: date,
-               profile: "Profile", now_utc: datetime) -> "Assessment":
-        """Judge each hour of local_date for this profile. Runs once per cycle."""
-
-    def choose(self, assessment: "Assessment", options: "WindowOptions") -> "GuidanceResult":
-        """Pick the window for one request. Pure and fast (< 5 ms)."""
+    def choose(self, assessment: Assessment, options: WindowOptions) -> GuidanceResult: ...  # per request, < 5 ms
 ```
+
+The API checks that the engine version that made a snapshot equals the running code's version. If they
+differ, it does not load the snapshot.
 
 ## Inputs (fixed by the data layer)
 
@@ -64,8 +60,12 @@ class GuidanceEngine(Protocol):
   | `heat_adapted` | `yes`, `no`, `unknown` | |
   | `hay_fever` | `yes`, `no`, `unknown` | |
 
-- `WindowOptions` (per request): `earliest_start` and `latest_start` (local times on `local_date`) and
-  `duration_min` (10–240).
+- `WindowOptions` (per request): `earliest_start` and `latest_start` as timezone-aware instants (the API turns
+  the local times into instants, handling daylight-saving days, and cuts `latest_start` so the activity ends
+  before the forecast does) and `duration_min` (10–240). The window must fit the whole activity.
+- Hours: `local_day_hours(local_date, tz)` gives the UTC hours that overlap the local day: 23, 24 or 25 of
+  them in Amsterdam on daylight-saving days. In Chennai (UTC+5:30) there are 25, because the first and last
+  hour lie half outside the day.
 
 ## Outputs (all fields: draft, to agree with Tilman)
 
@@ -77,10 +77,10 @@ never looks inside it.
 
 | field | type | meaning | status |
 |---|---|---|---|
-| `window.status` | `found` \| `none` | whether any window fits the options | draft, to agree with Tilman |
-| `window.start`, `window.end` | aware datetime (local) | the suggested window; present only if `found` | draft, to agree with Tilman |
-| `window.latest_start` | aware datetime (local) | latest start that still gives the same intensity hint | draft, to agree with Tilman |
-| `intensity_hint` | code | e.g. `as_planned`, `go_easier`, `light_only` (placeholder codes) | draft, to agree with Tilman |
+| `window_status` | `found` \| `none` | whether any window fits the options | draft, to agree with Tilman |
+| `window_start`, `window_end` | aware datetime | the suggested window; None when `none` | draft, to agree with Tilman |
+| `latest_start` | aware datetime | latest start that still gives the same intensity hint | draft, to agree with Tilman |
+| `intensity_hint` | code or None | e.g. `as_planned`, `go_easier`, `light_only` (placeholder codes); None when no window | draft, to agree with Tilman |
 | `indoor_alternative` | `suggested` \| `not_suggested` | whether to offer an indoor option | draft, to agree with Tilman |
 | `reasons[]` | list | why; ordered by importance | draft, to agree with Tilman |
 | `reasons[].code` | stable code | e.g. `heat_high`, `pm25_elevated`, `pollen_birch_high` (placeholders) | draft, to agree with Tilman |
@@ -100,12 +100,15 @@ not.
 - Codes are stable once agreed: partners build on them. New codes are added; old ones are not renamed.
 - Raise an exception on a bug; the API turns it into a 500 `engine-error`. Do not return partial results.
 
-## Sandbox engine (built in stage D2)
+## Sandbox engine (`gotime_engine/sandbox.py`)
 
 `SandboxEngine` gives plausible but clearly synthetic output:
 - `mode = sandbox`.
 - Every reason code is prefixed `sandbox_`, with the text "Sandbox example, not guidance".
-- No thresholds taken from literature.
+- No thresholds taken from literature. Each hour is only compared with the other hours of the same day:
+  among the warmest hours, the higher PM2.5 hours, or (with hay_fever = yes) the higher pollen hours.
+- `choose` picks the earliest start, in 15-minute steps, with the lowest level, where every hour the
+  activity touches has data.
 
 It exists so partners can integrate and we can test the API end to end. It is not a first version of the
 science.
