@@ -129,13 +129,24 @@ def test_quality_checks_on_stored_cycle(storage):
     write_forecast("2026-11-19 00:00")
     now = utc("2026-11-19 10:00")
     result = quality.run_checks("ecmwf_ifs", utc("2026-11-19 00:00"), now)
-    assert result["status"] == "failed"  # yesterday's cycles were never ingested
-    assert all("missing" in p for p in result["problems"])
-    assert quality.latest("ecmwf_ifs")["status"] == "failed"
+    assert result == quality.latest("ecmwf_ifs")
+    assert result["status"] == "ok"  # fresh store: cycles before the first one were never expected
     assert quality.check_cycle("ecmwf_ifs", utc("2026-11-19 00:00")) == []
     assert quality.check_cycle("ecmwf_ifs", utc("2026-11-19 06:00")) == [
         "cycle 2026-11-19 06 UTC not ingested"
     ]
+
+
+def test_missing_cycle_after_the_first_one(storage):
+    write_forecast("2026-11-18 12:00")
+    write_forecast("2026-11-19 00:00")
+    now = utc("2026-11-19 10:00")
+    # 18 UTC (deadline 05:37) is a gap after the first cycle; 06 UTC on the 18th predates it; 06 UTC today
+    # is still within its retry window.
+    assert quality.missing_cycles("ecmwf_ifs", now) == ["cycle 2026-11-18 18 UTC missing"]
+    result = quality.run_checks("ecmwf_ifs", utc("2026-11-19 00:00"), now)
+    assert result["status"] == "failed"
+    assert quality.latest("ecmwf_ifs")["status"] == "failed"
 
 
 def test_failed_quality_makes_source_degraded(storage, tmp_path, monkeypatch):
@@ -191,9 +202,10 @@ def test_scheduler_ingests_checks_and_precomputes(storage, monkeypatch, pings):
     assert snapshot_files.current_id("sandbox") is not None
     urls = [(m, u) for m, u, _ in pings]
     assert ("GET", "https://hc.example/precompute") in urls
-    # Quality failed (yesterday's cycles are missing in this fresh store): ingest /fail with the reason.
-    fail = [c for c in pings if c[1] == "https://hc.example/ingest/fail"]
-    assert fail and b"missing" in fail[0][2]
+    # Quality passed on this fresh store (no earlier cycles expected): ingest pinged as a success.
+    assert ("GET", "https://hc.example/ingest") in urls
+    fails = [c[2] for c in pings if c[1] == "https://hc.example/ingest/fail"]
+    assert not [f for f in fails if f.startswith(b"ecmwf_ifs")]  # (the fake CAMS global never publishes)
 
     # CAMS global 00z is due from 12:10 and never arrives: after its 6 h window, one ingest /fail ping.
     pings.clear()
