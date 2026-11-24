@@ -28,7 +28,6 @@ log = logging.getLogger(__name__)
 
 NAME = "ecmwf_ifs"
 RESOL = "0p1"
-RUNS = [0, 6, 12, 18]
 MAX_STEP = 96
 STEPS = list(range(0, MAX_STEP + 1, 3))
 PARAMS = ["2t", "2d", "10u", "10v", "ssrd"]

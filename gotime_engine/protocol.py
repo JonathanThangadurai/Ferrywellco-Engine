@@ -9,7 +9,7 @@ Two steps, because request options such as start times and duration are continuo
     choose(...)  per request, from the stored assessment (must be fast and pure)
 """
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from itertools import product
 from typing import Any, Literal, Protocol
@@ -89,9 +89,6 @@ class GuidanceResult:
     indoor_alternative: Literal["suggested", "not_suggested"]
     reasons: list[Reason]
     variables_used: list[str]
-
-    def as_dict(self) -> dict[str, Any]:
-        return asdict(self)
 
 
 # An assessment is whatever choose() needs; it must be JSON-serialisable, because it is stored in the

@@ -280,3 +280,17 @@ def test_test_clock_only_in_test_env(monkeypatch, tmp_path):
         app_module.serve_app()
     monkeypatch.setenv("GOTIME_ENV", "test")
     assert app_module.serve_app() is not None
+
+
+def test_source_check_reason_is_one_line(storage, monkeypatch):
+    from types import SimpleNamespace
+
+    from gotime_ops import source_check
+
+    def fetch():
+        raise ValueError("did not find a match\nin any backend,\n  see: https://example.org")
+
+    monkeypatch.setitem(source_check.SOURCES, "broken", SimpleNamespace(fetch=fetch, to_points=None))
+    ok, reason = source_check.check("broken")
+    assert not ok
+    assert reason == "ValueError: did not find a match in any backend, see: https://example.org"

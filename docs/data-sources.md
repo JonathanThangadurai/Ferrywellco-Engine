@@ -167,10 +167,13 @@ humidity, wind and pollution). The chosen cell and the method are written to the
 ## 6. ERA5 (climatology)
 
 - **Provider / dataset**: ECMWF / Copernicus Climate Change Service, CDS dataset `reanalysis-era5-single-levels`. [docs]
-- **Access**: `cdsapi.Client(url=CDS_URL, key=COPERNICUS_KEY)` (same key as the ADS; `~/.cdsapirc` holds the same), `area` = the city box, our variables only, one month per request.
-- **Status** [B]: the request is **accepted** (so key and licence work), but on 2026-11-17 the jobs stayed queued for over an hour. The CDS/ADS announced maintenance for that day (08:00–17:00 CET) affecting data more than 4–5 days old, which is all of ERA5. Size and time to be measured again after the maintenance. A later size-test request was **rejected**: "Maximum number queued requests for this dataset has been reached" (the earlier check jobs were still queued). Rule for the pipeline: one ERA5 request at a time, never start a new one while one is queued.
+- **Access**: `cdsapi.Client(url=CDS_URL, key=COPERNICUS_KEY)` (same key as the ADS; `~/.cdsapirc` holds the same), `area` = the city box, our variables only, one day per request.
+- **Status** [B]: the request is **accepted** (so key and licence work), but on 2026-11-17 the jobs stayed queued for over an hour. The CDS/ADS announced maintenance for that day (08:00–17:00 CET) affecting data more than 4–5 days old, which is all of ERA5. A request on 2026-11-18 arrived after a few hours: 83 KB per city per day. A later size-test request was **rejected**: "Maximum number queued requests for this dataset has been reached" (the earlier check jobs were still queued). Rule for the pipeline: one ERA5 request at a time, never start a new one while one is queued.
 - **Licence / attribution**: CC BY 4.0. "Contains modified Copernicus Climate Change Service information [year]"; DOI 10.24381/cds.adbb2d47. Accept the licence on the dataset page. [docs]
 - **Resolution / timing**: 0.25°, hourly, 1940 to now. Updated daily, about 5 days behind (preliminary "ERA5T"; final data 2–3 months later). [docs]
+- **Format** [live]: with `data_format: netcdf` the CDS sends a **zip of two NetCDF files**, one per step type
+  (`stepType-instant`: t2m, d2m, u10, v10, lsm; `stepType-accum`: ssrd), even with `download_format: unarchived`.
+  The source module merges them.
 - **Time stamp**: instantaneous fields at the stamp. Accumulated fields (`ssrd`) cover the hour **ending** at the stamp.
 - **Use**: climatology for both cities (Chennai has no other history). Stored with `kind = reanalysis`.
 

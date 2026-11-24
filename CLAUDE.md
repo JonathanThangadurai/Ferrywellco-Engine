@@ -28,7 +28,8 @@ interface. The health engine reads data through the interface defined here.
 
 Python 3.12, uv, ruff, pytest. Downloads: own ECMWF byte-range fetcher (httpx; AWS first, ECMWF fallback), cdsapi, httpx. Grids: xarray + cfgrib/eccodes,
 h5netcdf. Raw files ~2 days; processed Parquet queried with DuckDB (~10 days live + archive). One storage root
-(`GOTIME_STORAGE_ROOT`, local now, `s3://` later via fsspec). Later: cron in Docker, FastAPI + Pydantic.
+(`GOTIME_STORAGE_ROOT`, local now, `s3://` later via fsspec). API: FastAPI + Pydantic. Ops: one scheduler process and
+Docker Compose (api, scheduler, monitor, Caddy).
 Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 
 ## Known facts (details and verification in docs/data-sources.md)
@@ -47,6 +48,7 @@ Target server: Hetzner VPS, 4 GB RAM, 40 GB disk.
 - Public GitHub repo `JonathanThangadurai/Ferrywellco-Engine` (origin). Package stays `gotime_data`.
 - CAMS global: NO2/O3 only at `model_level` 137 (separate request; silently dropped otherwise), kg/kg → µg/m³ via sp and t2m.
 - KNMI EDR: time stamp = end of hour for hourly sums/means; `RH` is precipitation (humidity is `U`); T at 1.5 m; Q in J/cm².
+- ERA5 NetCDF from the CDS comes as a zip of two files (instant, accum) even with `download_format: unarchived`.
 - CDS/ADS: one request at a time per dataset; abandoned jobs stay queued and block new ones ("Maximum number queued requests").
 - Canonical table has `site_id` plus a `sites` table (site_id, name, lat, lon, station_type, source).
 - CAMS pollen is unvalidated/experimental according to CAMS.
