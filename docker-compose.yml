@@ -53,7 +53,7 @@ services:
     depends_on: [api]
 
   caddy:
-    image: caddy:2.8.4-alpine
+    image: caddy:2.11.9-alpine
     restart: unless-stopped
     env_file: ${GOTIME_ETC:-/etc/gotime}/gotime.env
     ports: ["80:80", "443:443"]
