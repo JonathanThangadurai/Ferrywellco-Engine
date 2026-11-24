@@ -1,7 +1,7 @@
 """Make one small request per data source and print OK / FAILED and why.
 
 Keys are read with gotime_data.keys and never printed; error texts are scrubbed of key values.
-Run: uv run gotime-data check   (or uv run python scripts/check_access.py)
+Run: uv run gotime-data check
 """
 
 import os

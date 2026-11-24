@@ -1,8 +1,8 @@
 # Size test (Stage B)
 
 Measured 2026-11-17 on a MacBook (home connection), one forecast cycle or one day per source, cropped to the
-city boxes in `config/locations.yaml`, our variables only. Script: `scripts/size_test.py`; raw numbers in
-`data/size-test/results.jsonl` (not committed). Peak memory = peak resident memory of the Python process for that
+city boxes in `config/locations.yaml`, our variables only. Script: `scripts/size_test.py` (removed after Stage B; it is in the git
+history up to commit `19aa04e`); raw numbers in `data/size-test/results.jsonl` (not committed). Peak memory = peak resident memory of the Python process for that
 source (includes ~120 MB for Python + xarray + pandas imports).
 
 ## Measured per source
@@ -37,14 +37,16 @@ Notes on the measurements:
 
 ## ERA5
 
-Not measured yet. The access check proved the key and licence work (the job was **accepted**, no 401/403), but on
+Measured late (end of this section). The access check proved the key and licence work (the job was **accepted**, no 401/403), but on
 2026-11-17 the jobs stayed queued for over an hour during announced CDS/ADS maintenance (08:00–17:00 CET, data older
 than 4–5 days, i.e. all of ERA5). The size-test request was then **rejected** with "Maximum number queued requests
 for this dataset has been reached", because the earlier check jobs were still in the queue. To redo after the queue
-clears: `uv run python scripts/size_test.py era5`. **Retried 18 Nov** after the old jobs were cancelled: the CAMS
+cleared. **Retried 18 Nov** after the old jobs were cancelled: the CAMS
 land-sea mask request on the ADS went through in 24 s, but the ERA5 request was still queued at the CDS after
-~40 min, so it is still not measured (the request is left running, one at a time). Expected size (0.25°, 5 variables, 5 × 5 cells, 24 h): well under
-0.1 MB per city per day, so a 20-year climatology per city is under 1 GB; it is a one-off download.
+~40 min (the request was left running, one at a time). It arrived the same evening: **83 KB per city per day**
+(4 × 5 cells at 0.25°, 24 h, 5 variables), so a 20-year climatology per city is about 0.6 GB; it is a one-off
+download. The file is a zip of two NetCDF files (instant and accumulated variables), even when asking for an
+unarchived file; `gotime_data/sources/era5.py` merges them.
 
 ## Projection for the decided setup
 

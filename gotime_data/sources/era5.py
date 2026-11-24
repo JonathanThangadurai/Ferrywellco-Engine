@@ -3,9 +3,13 @@
 One request at a time (the CDS rejects new requests while old ones are queued). ERA5 ssrd is the
 accumulation over the hour ENDING at the time stamp (J/m2) -> W/m2 = / 3600, valid_time = stamp - 1 h.
 Point: nearest land cell with ERA5's own land-sea mask (requested with the data).
+The CDS sends a zip with one NetCDF file per step type (instant: t2m, d2m, u10, v10, lsm; accum: ssrd),
+even with download_format "unarchived"; open_download() merges them.
 """
 
 import logging
+import tempfile
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -100,14 +104,32 @@ def dataset_to_rows(ds: xr.Dataset, loc_id: str) -> tuple[pd.DataFrame, list]:
     return pd.concat(frames, ignore_index=True), site
 
 
+def open_download(path: Path) -> xr.Dataset:
+    """The downloaded file as one dataset in memory: a plain NetCDF file, or the CDS zip of several."""
+    if not zipfile.is_zipfile(path):
+        with xr.open_dataset(path) as ds:
+            return ds.load()
+    parts = []
+    with zipfile.ZipFile(path) as z, tempfile.TemporaryDirectory() as tmp:
+        for name in z.namelist():
+            if not name.endswith(".nc"):
+                continue
+            member = Path(tmp) / Path(name).name  # never a path from inside the zip
+            member.write_bytes(z.read(name))
+            with xr.open_dataset(member) as ds:
+                parts.append(ds.load())
+    if not parts:
+        raise ValueError(f"{path.name}: zip without NetCDF files")
+    return xr.merge(parts, compat="override", join="exact")
+
+
 def to_points(raw: Path) -> Batch:
     read_manifest(raw)
     frames, sites = [], []
     for loc_id in locations():
         path = raw / f"{loc_id}.nc"
         if path.exists():
-            with xr.open_dataset(path) as ds:
-                df, site = dataset_to_rows(ds.load(), loc_id)
+            df, site = dataset_to_rows(open_download(path), loc_id)
             frames.append(df)
             sites.append(site)
     hourly = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()

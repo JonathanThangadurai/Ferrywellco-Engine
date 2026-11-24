@@ -6,8 +6,8 @@ The GOTime data layer turns weather and air quality forecasts and observations i
 which the wellness algorithm reads through a small interface. GOTime gives wellness guidance (when and how to be active
 outside); it is not a health service.
 
-Status: stages A to D2 done (data layer, GOTime API with a sandbox engine). **Stage D3 (deployment, scheduler,
-monitoring, CI) on branch `d3-ops`, awaiting review.**
+Status: stages A to D3 done (data layer, GOTime API with a sandbox engine, deployment, scheduler, monitoring, CI).
+Not deployed to the server yet (`docs/operations.md`). The health engine plugs in later (`docs/engine-interface.md`).
 
 ## What each stage does
 
@@ -58,8 +58,6 @@ uv run gotime-ops source-check ecmwf     # live access and format check of one s
 uv run gotime-ops backup | restore       # archive/, meta/, climatology/ <-> GOTIME_BACKUP_TARGET
 docker compose up -d                     # api, scheduler, monitor, caddy (docs/operations.md)
 ```
-
-Stage B measurement scripts: `scripts/check_access.py`, `scripts/size_test.py` (see `docs/size-test.md`).
 
 ADS/CDS (CAMS, ERA5) allow only a few queued requests per dataset; the pipeline sends one request at a time.
 OpenAQ (`openaq`) is for internal verification only: it is left out of `get_hourly` unless

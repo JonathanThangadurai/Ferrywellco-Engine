@@ -31,7 +31,8 @@ def check(name: str) -> tuple[bool, str]:
             variables = ", ".join(sorted(rows["variable"].unique()))
             return True, f"{len(rows)} rows ({variables})"
         except Exception as e:  # any failure is a finding; the message is scrubbed of keys
-            return False, scrub(f"{type(e).__name__}: {e}")[:300]
+            # one line: the GitHub issue shows only the last line of the output
+            return False, scrub(" ".join(f"{type(e).__name__}: {e}".split()))[:300]
         finally:
             if old is None:
                 os.environ.pop("GOTIME_STORAGE_ROOT", None)
