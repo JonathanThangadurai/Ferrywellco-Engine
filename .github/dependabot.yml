@@ -1,0 +1,22 @@
+# Weekly dependency updates as pull requests (one grouped PR per ecosystem). CI must pass before merging.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule: {interval: weekly, day: monday}
+    groups:
+      python: {patterns: ["*"]}
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly, day: monday}
+    groups:
+      actions: {patterns: ["*"]}
+  - package-ecosystem: docker
+    directory: /
+    schedule: {interval: weekly, day: monday}
+    ignore:
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]  # stay on 3.12
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: {interval: weekly, day: monday}
