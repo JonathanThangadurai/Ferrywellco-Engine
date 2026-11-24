@@ -15,7 +15,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /app
 
 # Dependencies first (cached while only code changes). ecCodes comes as a wheel (eccodeslib).
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY gotime_data ./gotime_data

@@ -154,6 +154,11 @@ ERA5 and CAMS both use `COPERNICUS_KEY`; `~/.cdsapirc` holds the same CDS key fo
 - ADS: `cams-europe-air-quality-forecasts`, `cams-global-atmospheric-composition-forecasts`
 - CDS: `reanalysis-era5-single-levels`
 
+## Licence
+
+Proprietary: all rights reserved (`LICENSE`). The repository is public to read, but the code may not be used,
+copied or distributed without written permission. Third-party data keeps its own licence (below).
+
 ## Attribution
 
 Contains ECMWF open data (CC BY 4.0). Generated using Copernicus Atmosphere Monitoring Service and Copernicus Climate
